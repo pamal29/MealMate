@@ -1,0 +1,17 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Secrets
+.env
+*.pem
+google-services.json
+GoogleService-Info.plist
+firebase-service-account*.json
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
