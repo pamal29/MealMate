@@ -9,6 +9,8 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
+app.use('/api/auth', require('./modules/auth/auth.routes')); 
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'mealmate-api' });
 });
