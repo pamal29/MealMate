@@ -54,11 +54,13 @@ router.put('/mine', async (req, res) => {
 
   try{
     const result = await db.query(
+      // COALESCE() returns the first value that isn't SQL NULL
+      
       `update shops
-      set name = coalesce($1, name),
-          category = coalesce($2, category),
-          location = coalesce($3, location),
-          is_open = coalesce($4, is_open)
+        set name = coalesce($1, name), 
+            category = coalesce($2, category),
+            location = coalesce($3, location),
+            is_open = coalesce($4, is_open)
       where owner_id = $5
       returning *`,
     [
