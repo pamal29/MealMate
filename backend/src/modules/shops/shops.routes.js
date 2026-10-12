@@ -1,34 +1,34 @@
 const router = require('express').Router();
 const db = require('../../config/db');
-const {requireAuth, requireRole} = require ('../../middleware/auth');
+const { requireAuth, requireRole } = require('../../middleware/auth');
 
 router.use(requireAuth, requireRole('shop_owner'));
 
 router.post('/', async (req, res) => {
   const { name, category, location } = req.body;
 
-  if(!name || !category || !location) {
-    return res.status(400).json({ error: 'All fields are required' });
+  if (!name || !category || !location) {
+    return res.status(400).json({ message: 'name, category and location are required' });
   }
 
   try {
     const result = await db.query(
-      `INSERT INTO shops (owner_id, name, category, location) 
-      VALUES ($1, $2, $3, $4)
-      returning *`,
+      `insert into shops (owner_id, name, category, location)
+       values ($1, $2, $3, $4)
+       returning *`,
       [req.user.id, name.trim(), category.trim(), location.trim()]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
     if (err.code === '23505') {
-      return res.status(400).json({ error: 'Shop with this name already exists' });
+      return res.status(409).json({ message: 'You already have a shop' });
     }
     console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-
+// GET /api/shops/mine - owner reads their own shop
 router.get('/mine', async (req, res) => {
   try {
     const result = await db.query(
