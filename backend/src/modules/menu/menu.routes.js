@@ -61,4 +61,85 @@ router.get('/mine', async (req, res) => {
   }
 });
 
+// UUID check, so a bad :id gives 400 instead of a database error
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+//edit menu item
+router.put('./:id', async (req, res) => {
+  const {id} = req.params;
+  const {name, description, price, is_available} = req.body;
+
+  if (!UUID_RE.test(id)) {
+    return res.status(400).json({ message: 'Invalid item ID format' });
+  }
+
+  if(is_available !== undefined && typeof is_available !== 'boolean'){
+    return res.status(400).json({ message: 'is_available must be a boolean' });
+  }
+
+  let priceNum = null;
+  if (price !== undefined) {
+    priceNum = Number(price);
+    if (Number.isNaN(priceNum) || priceNum < 0) {
+      return res.status(400).json({ message: 'Price must be a number, 0 or more' });
+    }
+  }
+
+  try {
+    const result = await db.query(
+      ` update menu_items 
+        set name = $1, 
+            description = $2, 
+            price = $3, 
+            is_available = $4 
+        where id = $5 
+          and shop_id(select id from shops where owner_id = $6)
+        returning *`,
+      [
+        name ? name.trim() : null,
+        description ? description.trim() : null,
+        priceNum,
+        is_available ?? null,
+        id,
+        req.user.id
+      ]
+    );
+
+    if(result.rows.length === 0 ){
+      return res.status(404).json({ message: 'Item not found' });
+    }
+    res.json(result.rows[0]);
+  } catch(err){
+    console.error(err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+router.delete('./:id', async (req, res) => {
+  const {id} = req.params;
+
+  if (!UUID_RE.test(id)) {
+    return res.status(400).json({ message: 'Invalid item ID format' });
+  }
+
+  try{
+    const result = await db.query(
+      `delete from menu_items
+      where id = $1
+       and shop_id = (select id from shops where owner_id = $2)
+       returning id`,
+       [id, req.user.id]
+    );
+
+    if  (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Item not found' });
+    }
+    res.json({ message: 'Item deleted successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+
 module.exports = router;
