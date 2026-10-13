@@ -11,6 +11,7 @@ app.use(express.json());
 
 app.use('/api/auth', require('./modules/auth/auth.routes')); 
 app.use('/api/shops', require('./modules/shops/shops.routes'));
+app.use('/api/menu', require('./modules/menu/menu.routes'));
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'mealmate-api' });
