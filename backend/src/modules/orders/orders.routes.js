@@ -139,4 +139,31 @@ router.get('/mine', requireAuth, requireRole('student'), async (req, res) => {
   }
 });
 
+router.patch(':/id/cancel', requireAuth, requireRole('student'), async (req, res) => {
+  try{
+    const {id} = req.params;
+    if(!UUID_RE.test(id)){
+      return res.status(400).json({ message: 'Invalid order ID' });
+    }
+
+    const result = await db.query(
+      `UPDATE orders
+       SET status = 'cancelled'
+       WHERE id = $1
+        AND student_id = $2
+        AND status = 'pending'
+      RETURNING id, status, total, pickup_time, note, created_at`,
+      [id, req.user.id]
+    )
+
+    if(result.rows.length === 0){
+      return res.status(404).json({ message: 'Order not found or already cancelled' });
+    }
+    res.json({ order: result.rows[0] });
+  } catch (err){
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;
