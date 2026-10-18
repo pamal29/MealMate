@@ -10,6 +10,11 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/api/auth', require('./modules/auth/auth.routes')); 
+app.use('/api/shops', require('./modules/shops/shops.public.routes'));
+app.use('/api/shops', require('./modules/shops/shops.routes'));
+app.use('/api/menu', require('./modules/menu/menu.routes'));
+app.use('/api/orders', require('./modules/orders/orders.routes'));
+app.use('/api/notifications', require('./modules/notifications/notifications.routes'));
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'mealmate-api' });
