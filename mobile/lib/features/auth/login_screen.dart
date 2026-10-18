@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../home/home_screen.dart';
+import '../owner/owner_dashboard_screen.dart';
 import 'auth_service.dart';
 import 'register_screen.dart';
 
@@ -47,7 +48,11 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       TextInput.finishAutofillContext();
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
+        MaterialPageRoute<void>(
+          builder: (_) => AuthService.user?['role'] == 'shop_owner'
+              ? const OwnerDashboardScreen()
+              : const HomeScreen(),
+        ),
       );
     } on AuthException catch (error) {
       if (mounted) setState(() => _error = error.message);
@@ -464,6 +469,17 @@ class _LoginScreenState extends State<LoginScreen> {
     padding: const EdgeInsets.only(top: 32, bottom: 16),
     child: Column(
       children: [
+        TextButton(
+          onPressed: _loading
+              ? null
+              : () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const OwnerDashboardScreen(isPreview: true),
+                  ),
+                ),
+          child: const Text('Preview shop-owner dashboard'),
+        ),
+        const SizedBox(height: 12),
         Wrap(
           alignment: WrapAlignment.center,
           crossAxisAlignment: WrapCrossAlignment.center,

@@ -52,8 +52,8 @@ builds have no localhost fallback. Android HTTP access is enabled only in debug.
 - Log out clears the session and navigation history. Expired tokens return users
   to sign-in through the profile screen.
 - JWT and user details are held in memory only; restarting the app requires login.
-- Student and shop-owner accounts use the same backend login endpoint and current
-  home screen. A separate shop-management dashboard is not implemented.
+- Student and shop-owner accounts use the same backend login endpoint. Shop-owner
+  sessions open the owner dashboard; students open Home.
 - Google sign-in and password recovery remain unavailable because the backend
   has no endpoints for those features.
 
@@ -103,3 +103,14 @@ flutter test test/ordering_test.dart --dart-define=CAPTURE_ORDERING=true
 ```
 
 This produces `build/menu-preview.png` and `build/checkout-preview.png`.
+
+## Shop-owner dashboard
+
+Tap **Preview shop-owner dashboard** on the login page to explore without a
+database. The screenshot-based dashboard shows Shan Food Cabin, overview cards,
+and three sample pending orders. Confirm Order and Reject update local preview
+history with an Undo action; they do not change real orders or notify customers.
+Pending counts reflect the visible cards (three initially). Home shows an
+overview, Orders shows pending/history, and Profile lets preview users return to
+login. Signed-in owners have the real account profile. The dashboard's order data
+is sample data even when signed in; live shop/order management is not connected.

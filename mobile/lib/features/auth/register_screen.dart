@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../home/home_screen.dart';
+import '../owner/owner_dashboard_screen.dart';
 import 'auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -45,7 +46,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
+        MaterialPageRoute<void>(
+          builder: (_) => AuthService.user?['role'] == 'shop_owner'
+              ? const OwnerDashboardScreen()
+              : const HomeScreen(),
+        ),
         (_) => false,
       );
     } on AuthException catch (error) {
