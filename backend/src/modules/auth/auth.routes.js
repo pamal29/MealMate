@@ -45,10 +45,14 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { password } = req.body;
+    const email =
+      typeof req.body.email === 'string'
+        ? req.body.email.toLowerCase().trim()
+        : '';
 
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+      return res.status(400).json({ message: 'Email and password are required' });
     }
 
     const result = await db.query(
@@ -63,7 +67,7 @@ router.post('/login', async (req, res) => {
       : false;
 
     if (!user || !passwordOk) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
     const token = jwt.sign(
@@ -76,7 +80,7 @@ router.post('/login', async (req, res) => {
     res.json({ token, user });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -89,13 +93,13 @@ router.get('/me', requireAuth, async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ message: 'User not found' });
     }
 
     res.json({ user: result.rows[0] });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
