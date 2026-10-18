@@ -139,7 +139,44 @@ router.get('/mine', requireAuth, requireRole('student'), async (req, res) => {
   }
 });
 
-router.patch(':/id/cancel', requireAuth, requireRole('student'), async (req, res) => {
+router.get('/shop', requireAuth, requireRole('shop_owner'), async (req, res) => {
+  try {
+    const { status } = req.query;
+    const allowed = ['pending', 'accepted', 'cancelled'];
+    if (status !== undefined && !allowed.includes(status)) {
+      return res.status(400).json({ message: 'Invalid status filter' });
+    }
+
+    const result = await db.query(
+      `SELECT o.id, o.status, o.total, o.pickup_time, o.note, o.created_at,
+              u.name AS student_name,
+              (SELECT json_agg(
+                        json_build_object(
+                          'menu_item_id', oi.menu_item_id,
+                          'name', mi.name,
+                          'quantity', oi.quantity,
+                          'unit_price', oi.unit_price
+                        ) ORDER BY mi.name)
+               FROM order_items oi
+               JOIN menu_items mi ON mi.id = oi.menu_item_id
+               WHERE oi.order_id = o.id) AS items
+       FROM orders o
+       JOIN users u ON u.id = o.student_id
+       WHERE o.shop_id IN (SELECT id FROM shops WHERE owner_id = $1)
+         AND ($2::text IS NULL OR o.status::text = $2)
+       ORDER BY o.created_at DESC
+       LIMIT 100`,
+      [req.user.id, status ?? null]
+    );
+
+    res.json({ orders: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.patch('/:id/cancel', requireAuth, requireRole('student'), async (req, res) => {
   try{
     const {id} = req.params;
     if(!UUID_RE.test(id)){
