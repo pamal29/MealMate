@@ -139,7 +139,7 @@ router.get('/mine', requireAuth, requireRole('student'), async (req, res) => {
   }
 });
 
-router.patch(':/id/cancel', requireAuth, requireRole('student'), async (req, res) => {
+router.patch('/:id/cancel', requireAuth, requireRole('student'), async (req, res) => {
   try{
     const {id} = req.params;
     if(!UUID_RE.test(id)){

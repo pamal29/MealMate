@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../home/home_screen.dart';
 import 'auth_service.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.onLogin = AuthService.login});
@@ -415,6 +416,17 @@ class _LoginScreenState extends State<LoginScreen> {
             OutlinedButton(
               onPressed: _loading
                   ? null
+                  : () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const HomeScreen(isPreview: true),
+                      ),
+                    ),
+              child: const Text('Explore preview — no login needed'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: _loading
+                  ? null
                   : () => _unavailable('Student Google sign-in'),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(44),
@@ -457,7 +469,12 @@ class _LoginScreenState extends State<LoginScreen> {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text("Don't have an account? ", style: _text(12, color: _muted)),
-            _link('Register', () => _unavailable('Registration')),
+            _link(
+              'Register',
+              () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const RegisterScreen()),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -473,7 +490,21 @@ class _LoginScreenState extends State<LoginScreen> {
               Text('Are you a canteen owner?', style: _text(12, color: _muted)),
               _link(
                 'Shop Login',
-                () => _unavailable('Shop Login'),
+                () => showDialog<void>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Shop owner login'),
+                    content: const Text(
+                      'Use your shop owner email and password in the login form above.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  ),
+                ),
                 color: Colors.white,
               ),
             ],

@@ -104,6 +104,30 @@ void main() {
     expect(find.byType(LoginScreen), findsNothing);
   });
 
+  testWidgets('Preview opens without login and can return to login', (
+    tester,
+  ) async {
+    var calls = 0;
+    await mount(
+      tester,
+      login: (_, _) async {
+        calls++;
+      },
+    );
+    await tester.ensureVisible(find.text('Explore preview — no login needed'));
+    await tester.tap(find.text('Explore preview — no login needed'));
+    await tester.pumpAndSettle();
+    expect(find.text('Preview mode · Sample menu'), findsOneWidget);
+    expect(calls, 0);
+    await tester.tap(find.text('Profile'));
+    await tester.pumpAndSettle();
+    expect(find.text('You are exploring a preview'), findsOneWidget);
+    await tester.tap(find.text('Back to login'));
+    await tester.pumpAndSettle();
+    expect(find.text('Welcome back'), findsOneWidget);
+    expect(calls, 0);
+  });
+
   testWidgets('Small screen and larger text remain scrollable', (tester) async {
     await mount(tester);
     tester.view.physicalSize = const Size(320, 568);
