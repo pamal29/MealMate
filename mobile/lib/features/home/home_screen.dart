@@ -4,6 +4,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../auth/auth_service.dart';
 import '../auth/profile_screen.dart';
+import '../auth/student_profile_view.dart';
+import '../ordering/student_orders_screen.dart';
 import 'home_style.dart';
 import '../ordering/shop_menu_screen.dart';
 import '../ordering/tray.dart';
@@ -103,7 +105,11 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              _greeting,
+              _navIndex == 3
+                  ? 'Profile'
+                  : _navIndex == 2
+                  ? 'Orders'
+                  : _greeting,
               style: const TextStyle(fontSize: 10, color: Color(0xFFD4D4D4)),
             ),
           ],
@@ -242,51 +248,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: switch (_navIndex) {
                   3 =>
                     widget.isPreview
-                        ? Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text('You are exploring a preview'),
-                                const SizedBox(height: 12),
-                                const Text('Sign in to access your account.'),
-                                const SizedBox(height: 16),
-                                FilledButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('Back to login'),
-                                ),
-                              ],
-                            ),
+                        ? StudentProfileView(
+                            isPreview: true,
+                            user: const {
+                              'name': 'Pamal Perera',
+                              'email': 'pamal@example.com',
+                              'phone': '+94 71 234 5678',
+                            },
+                            onLogout: () => Navigator.pop(context),
+                            onOrders: () => setState(() => _navIndex = 2),
                           )
-                        : const ProfileScreen(),
-                  2 => const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.receipt_long_outlined,
-                            size: 40,
-                            color: HomeStyle.muted,
+                        : ProfileScreen(
+                            onOrders: () => setState(() => _navIndex = 2),
                           ),
-                          SizedBox(height: 16),
-                          Text(
-                            'Your orders',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Order tracking will be available when ordering is connected.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: HomeStyle.muted),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  2 => const StudentOrdersScreen(),
                   _ => _shops(),
                 },
               ),

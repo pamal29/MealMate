@@ -152,7 +152,11 @@ class AuthService {
       );
     }
     if (token != bearer) throw const AuthException('Please sign in again.');
-    return user = data['user'] as Map<String, dynamic>;
+    final profile = data['user'] as Map<String, dynamic>;
+    if (!profile.containsKey('phone') && user?['phone'] != null) {
+      profile['phone'] = user!['phone'];
+    }
+    return user = profile;
   }
 }
 

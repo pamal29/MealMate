@@ -34,7 +34,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(CheckoutScreen), findsOneWidget);
     expect(find.text('Place Order (LKR 520)'), findsOneWidget);
-    await tester.tap(find.byTooltip('Increase Chicken Fried Rice (SUSL Special)'));
+    await tester.tap(
+      find.byTooltip('Increase Chicken Fried Rice (SUSL Special)'),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Back'));
     await tester.pumpAndSettle();
@@ -93,7 +95,7 @@ void main() {
     expect(find.text('No matching shops'), findsOneWidget);
     await tester.tap(find.text('Orders'));
     await tester.pumpAndSettle();
-    expect(find.text('Your orders'), findsOneWidget);
+    expect(find.text('Active 3'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

@@ -6,6 +6,7 @@ import '../home/home_screen.dart';
 import '../owner/owner_dashboard_screen.dart';
 import 'auth_service.dart';
 import 'register_screen.dart';
+import 'owner_login_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.onLogin = AuthService.login});
@@ -506,19 +507,9 @@ class _LoginScreenState extends State<LoginScreen> {
               Text('Are you a canteen owner?', style: _text(12, color: _muted)),
               _link(
                 'Shop Login',
-                () => showDialog<void>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Shop owner login'),
-                    content: const Text(
-                      'Use your shop owner email and password in the login form above.',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('OK'),
-                      ),
-                    ],
+                () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const OwnerLoginScreen(),
                   ),
                 ),
                 color: Colors.white,

@@ -5,6 +5,7 @@ import '../home/widgets/category_chips.dart';
 import 'checkout_screen.dart';
 import 'ordering_widgets.dart';
 import 'tray.dart';
+import 'food_item_sheet.dart';
 
 class ShopMenuScreen extends StatefulWidget {
   final Tray tray;
@@ -211,73 +212,76 @@ class _ShopMenuScreenState extends State<ShopMenuScreen> {
       ],
     ),
   );
-  Widget _food(FoodItem item) => Container(
-    margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-    padding: const EdgeInsets.all(16),
-    decoration: orderPanel(),
-    child: Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.name,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  height: 1.3,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                item.description,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, color: HomeStyle.muted),
-              ),
-              const SizedBox(height: 18),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(
-                    'LKR ${item.price}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: HomeStyle.orange,
-                    ),
+  Widget _food(FoodItem item) => GestureDetector(
+    onTap: () => showFoodItem(context, widget.tray, item),
+    child: Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      padding: const EdgeInsets.all(16),
+      decoration: orderPanel(),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    height: 1.3,
                   ),
-                  if (widget.tray.quantity(item) > 0)
-                    QuantityControl(tray: widget.tray, item: item)
-                  else
-                    SizedBox(
-                      width: 36,
-                      height: 36,
-                      child: IconButton.filled(
-                        tooltip: 'Add ${item.name}',
-                        style: IconButton.styleFrom(
-                          backgroundColor: HomeStyle.orange,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.zero,
-                        ),
-                        onPressed: () => widget.tray.change(item, 1),
-                        icon: const Icon(Icons.add, size: 20),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  item.description,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: HomeStyle.muted),
+                ),
+                const SizedBox(height: 18),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      'LKR ${item.price}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: HomeStyle.orange,
                       ),
                     ),
-                ],
-              ),
-            ],
+                    if (widget.tray.quantity(item) > 0)
+                      QuantityControl(tray: widget.tray, item: item)
+                    else
+                      SizedBox(
+                        width: 36,
+                        height: 36,
+                        child: IconButton.filled(
+                          tooltip: 'Add ${item.name}',
+                          style: IconButton.styleFrom(
+                            backgroundColor: HomeStyle.orange,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.zero,
+                          ),
+                          onPressed: () => widget.tray.change(item, 1),
+                          icon: const Icon(Icons.add, size: 20),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(width: 16),
-        FoodPhoto(
-          item: item,
-          size: MediaQuery.sizeOf(context).width < 350 ? 78 : 94,
-        ),
-      ],
+          const SizedBox(width: 16),
+          FoodPhoto(
+            item: item,
+            size: MediaQuery.sizeOf(context).width < 350 ? 78 : 94,
+          ),
+        ],
+      ),
     ),
   );
 }

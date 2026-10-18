@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'auth_service.dart';
 import 'login_screen.dart';
+import 'student_profile_view.dart';
+import '../ordering/student_orders_screen.dart';
+import '../home/home_style.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({super.key, this.onOrders});
+  final VoidCallback? onOrders;
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
@@ -27,7 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(24),
+    padding: EdgeInsets.zero,
     child: FutureBuilder<Map<String, dynamic>>(
       future: _profile,
       builder: (context, snapshot) {
@@ -59,29 +63,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         }
         final user = snapshot.data!;
-        return ListView(
-          children: [
-            const Icon(Icons.account_circle_outlined, size: 64),
-            const SizedBox(height: 16),
-            Text(
-              user['name'] as String? ?? '',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 24),
-            ListTile(
-              title: const Text('Email'),
-              subtitle: Text(user['email'] as String? ?? ''),
-            ),
-            ListTile(
-              title: const Text('Account type'),
-              subtitle: Text(
-                user['role'] == 'shop_owner' ? 'Shop owner' : 'Student',
+        return StudentProfileView(
+          user: user,
+          onLogout: _logout,
+          onOrders:
+              widget.onOrders ??
+              () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => Theme(
+                    data: HomeStyle.theme,
+                    child: Scaffold(
+                      appBar: AppBar(title: const Text('Orders')),
+                      body: const StudentOrdersScreen(),
+                    ),
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            FilledButton(onPressed: _logout, child: const Text('Log out')),
-          ],
         );
       },
     ),

@@ -121,7 +121,10 @@ void main() {
     expect(calls, 0);
     await tester.tap(find.text('Profile'));
     await tester.pumpAndSettle();
-    expect(find.text('You are exploring a preview'), findsOneWidget);
+    expect(
+      find.text('Student · Sabaragamuwa University · Preview'),
+      findsOneWidget,
+    );
     await tester.tap(find.text('Back to login'));
     await tester.pumpAndSettle();
     expect(find.text('Welcome back'), findsOneWidget);

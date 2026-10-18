@@ -110,7 +110,29 @@ Tap **Preview shop-owner dashboard** on the login page to explore without a
 database. The screenshot-based dashboard shows Shan Food Cabin, overview cards,
 and three sample pending orders. Confirm Order and Reject update local preview
 history with an Undo action; they do not change real orders or notify customers.
-Pending counts reflect the visible cards (three initially). Home shows an
-overview, Orders shows pending/history, and Profile lets preview users return to
+Pending counts reflect the visible cards (three initially). Home shows menu
+management, Orders shows pending/history, and Profile lets preview users return to
 login. Signed-in owners have the real account profile. The dashboard's order data
 is sample data even when signed in; live shop/order management is not connected.
+
+## Additional screenshot screens
+
+- Student Login → Shop Login opens the dedicated owner login. It uses the existing
+  authentication API and rejects student accounts; its preview link needs no API.
+- Owner Home opens menu management: search, category filters, add/edit/delete,
+  and stock toggles work locally. These changes remain while switching owner tabs
+  and are discarded when leaving the dashboard; they do not publish to customers.
+- Student Home → Profile opens the new profile design; My Orders opens Orders.
+  Preview profile edits are local to that profile view. Authenticated profile
+  edits and live notifications remain unavailable. Avatar/drink artwork is a
+  placeholder because original assets were not provided.
+- Orders has Active/Previous filters and tappable sample order details. These
+  records are labelled as samples even for signed-in users.
+- Tap a food card to open its detail sheet. Select quantity and Add to Order;
+  the existing tray and checkout use the same price and maximum of 20 per item.
+- Register has the new dark form, optional session-only phone, password visibility
+  and length indicator, account role, and agreement control. Final legal text
+  has not been supplied; the policy dialog explicitly states that limitation.
+
+Run `flutter test --dart-define=CAPTURE_NEW=true` to save screenshot previews in
+`build/` for these screens. Run `flutter analyze` for static checks.

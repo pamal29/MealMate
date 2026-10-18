@@ -39,9 +39,10 @@ void main() {
     expect(find.text('Rejected · Preview'), findsOneWidget);
     await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('View pending orders'));
+    expect(find.text('+ New Item'), findsOneWidget);
+    await tester.tap(find.text('Orders').last);
     await tester.pumpAndSettle();
-    expect(find.text('Pending Orders'), findsOneWidget);
+    expect(find.text('Order History'), findsOneWidget);
     await tester.tap(find.text('Profile'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Back to login'));
