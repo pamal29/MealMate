@@ -57,11 +57,19 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'Good $period${name.isEmpty ? '' : ', $name'}';
   }
 
+  void _navigate(int index) {
+    final route = ModalRoute.of(context);
+    Navigator.of(context).popUntil((r) => r == route);
+    setState(() => _navIndex = index);
+  }
+
   void _viewShop(Shop shop) {
     final tray = _trays.putIfAbsent(shop.id, () => Tray(shop));
     Navigator.push(
       context,
-      MaterialPageRoute<void>(builder: (_) => ShopMenuScreen(tray: tray)),
+      MaterialPageRoute<void>(
+        builder: (_) => ShopMenuScreen(tray: tray, onNavigate: _navigate),
+      ),
     );
   }
 
@@ -261,7 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         : ProfileScreen(
                             onOrders: () => setState(() => _navIndex = 2),
                           ),
-                  2 => const StudentOrdersScreen(),
+                  2 => StudentOrdersScreen(onNavigate: _navigate),
                   _ => _shops(),
                 },
               ),

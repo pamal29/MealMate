@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../auth/profile_screen.dart';
 import '../home/home_style.dart';
 import 'menu_management_screen.dart';
+import 'shop_profile_screen.dart';
 
 class OwnerDashboardScreen extends StatefulWidget {
   const OwnerDashboardScreen({super.key, this.isPreview = false});
@@ -114,169 +115,155 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
         ],
       ),
       body: IndexedStack(
-        index: _tab == 0 ? 0 : 1,
+        index: _tab,
         children: [
-          const MenuManagementScreen(),
-          _tab == 2
-              ? widget.isPreview
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text('Shop-owner preview'),
-                            const SizedBox(height: 12),
-                            const Text('No account or database is required.'),
-                            const SizedBox(height: 20),
-                            FilledButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Back to login'),
-                            ),
-                          ],
-                        ),
-                      )
-                    : const ProfileScreen()
-              : ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          MenuManagementScreen(onNavigate: (i) => setState(() => _tab = i)),
+          ListView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: HomeStyle.surface,
+                  border: Border.all(color: HomeStyle.border),
+                ),
+                child: Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 40,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: HomeStyle.surface,
-                        border: Border.all(color: HomeStyle.border),
-                      ),
-                      child: Row(
-                        children: [
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Shan Food Cabin',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: -.6,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Y junction',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: HomeStyle.muted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          const Icon(
-                            Icons.circle,
-                            size: 7,
-                            color: HomeStyle.green,
-                          ),
-                          const SizedBox(width: 4),
-                          const Text(
-                            'Open',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: HomeStyle.green,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      "Today's Overview",
-                      style: TextStyle(fontSize: 13),
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        Expanded(child: _metric('Orders', '28')),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _metric(
-                            'Pending',
-                            '$_pending new',
-                            accent: true,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Preview · Sample orders only',
-                      style: TextStyle(fontSize: 10, color: HomeStyle.muted),
-                    ),
-                    if (_tab == 0) ...[
-                      const SizedBox(height: 24),
-                      FilledButton(
-                        onPressed: () => setState(() {
-                          _tab = 1;
-                          _history = false;
-                        }),
-                        child: const Text('View pending orders'),
-                      ),
-                    ] else ...[
-                      const SizedBox(height: 12),
-                      Row(
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _history ? 'Order History' : 'Pending Orders',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.all(5),
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: HomeStyle.orange,
-                            ),
-                            child: Text(
-                              '${_history ? _orders.length - _pending : _pending}',
-                              style: const TextStyle(fontSize: 10),
+                            'Shan Food Cabin',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -.6,
                             ),
                           ),
-                          const Spacer(),
-                          TextButton(
-                            onPressed: () =>
-                                setState(() => _history = !_history),
-                            child: Text(
-                              _history ? 'Pending' : 'History',
-                              style: const TextStyle(
-                                color: HomeStyle.muted,
-                                fontSize: 12,
-                              ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Y junction',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: HomeStyle.muted,
                             ),
                           ),
                         ],
                       ),
-                      if (!_orders.any(
-                        (order) => (order.status != null) == _history,
-                      ))
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 48),
-                          child: Center(
-                            child: Text(
-                              _history
-                                  ? 'No orders in history yet.'
-                                  : 'All caught up! No pending orders.',
-                              style: const TextStyle(color: HomeStyle.muted),
-                            ),
-                          ),
-                        ),
-                      for (final order in _orders.where(
-                        (order) => (order.status != null) == _history,
-                      ))
-                        _card(order),
-                    ],
+                    ),
+                    const SizedBox(width: 12),
+                    const Icon(Icons.circle, size: 7, color: HomeStyle.green),
+                    const SizedBox(width: 4),
+                    const Text(
+                      'Open',
+                      style: TextStyle(fontSize: 11, color: HomeStyle.green),
+                    ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 8),
+              const Text("Today's Overview", style: TextStyle(fontSize: 13)),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(child: _metric('Orders', '28')),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _metric('Pending', '$_pending new', accent: true),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Preview · Sample orders only',
+                style: TextStyle(fontSize: 10, color: HomeStyle.muted),
+              ),
+              if (_tab == 0) ...[
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: () => setState(() {
+                    _tab = 1;
+                    _history = false;
+                  }),
+                  child: const Text('View pending orders'),
+                ),
+              ] else ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Text(
+                      _history ? 'Order History' : 'Pending Orders',
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: HomeStyle.orange,
+                      ),
+                      child: Text(
+                        '${_history ? _orders.length - _pending : _pending}',
+                        style: const TextStyle(fontSize: 10),
+                      ),
+                    ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () => setState(() => _history = !_history),
+                      child: Text(
+                        _history ? 'Pending' : 'History',
+                        style: const TextStyle(
+                          color: HomeStyle.muted,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (!_orders.any((order) => (order.status != null) == _history))
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 48),
+                    child: Center(
+                      child: Text(
+                        _history
+                            ? 'No orders in history yet.'
+                            : 'All caught up! No pending orders.',
+                        style: const TextStyle(color: HomeStyle.muted),
+                      ),
+                    ),
+                  ),
+                for (final order in _orders.where(
+                  (order) => (order.status != null) == _history,
+                ))
+                  _card(order),
+              ],
+            ],
+          ),
+          ShopProfileScreen(
+            onManageMenu: () => setState(() => _tab = 0),
+            onAccount: () {
+              if (widget.isPreview) {
+                Navigator.pop(context);
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => Theme(
+                      data: HomeStyle.theme,
+                      child: Scaffold(
+                        appBar: AppBar(title: const Text('Account')),
+                        body: const ProfileScreen(),
+                      ),
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(

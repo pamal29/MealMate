@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../home/home_style.dart';
+import 'food_editor_screen.dart';
 import '../home/widgets/category_chips.dart';
 
 class MenuManagementScreen extends StatefulWidget {
-  const MenuManagementScreen({super.key});
+  const MenuManagementScreen({super.key, this.onNavigate});
+  final ValueChanged<int>? onNavigate;
   @override
   State<MenuManagementScreen> createState() => _MenuManagementScreenState();
 }
@@ -12,21 +14,21 @@ class MenuManagementScreen extends StatefulWidget {
 class _MenuManagementScreenState extends State<MenuManagementScreen> {
   String _query = '', _category = 'All';
   final _items = [
-    _Dish(
+    MenuDish(
       'Chicken Fried Rice',
       'Basmati, roast chicken, egg',
       480,
       'Rice & Curry',
       'assets/food/rice.jpg',
     ),
-    _Dish(
+    MenuDish(
       'Vegetable Samosa',
       'Spiced potato, peas, crisp pastry',
       150,
       'Short Eats',
       'assets/food/samosa.jpg',
     ),
-    _Dish(
+    MenuDish(
       'Fresh Passion Fruit Juice',
       '350ml fresh squeezed, lightly sweetened',
       200,
@@ -35,105 +37,26 @@ class _MenuManagementScreenState extends State<MenuManagementScreen> {
       available: false,
     ),
   ];
-  Future<void> _edit([_Dish? dish]) async {
-    final name = TextEditingController(text: dish?.name);
-    final description = TextEditingController(text: dish?.description);
-    final price = TextEditingController(text: dish?.price.toString());
-    var category = dish?.category ?? 'Rice & Curry';
-    final form = GlobalKey<FormState>();
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, update) => AlertDialog(
-          title: Text(dish == null ? 'New menu item' : 'Edit menu item'),
-          content: SingleChildScrollView(
-            child: Form(
-              key: form,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: name,
-                    decoration: const InputDecoration(labelText: 'Dish name'),
-                    validator: (v) =>
-                        v == null || v.trim().isEmpty ? 'Enter a name.' : null,
-                  ),
-                  TextFormField(
-                    controller: description,
-                    decoration: const InputDecoration(labelText: 'Description'),
-                  ),
-                  TextFormField(
-                    controller: price,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Price (LKR)'),
-                    validator: (v) => (int.tryParse(v ?? '') ?? 0) <= 0
-                        ? 'Enter a positive whole amount.'
-                        : null,
-                  ),
-                  DropdownButtonFormField<String>(
-                    initialValue: category,
-                    items: [
-                      for (final c in [
-                        'Rice & Curry',
-                        'Short Eats',
-                        'Beverages',
-                      ])
-                        DropdownMenuItem(value: c, child: Text(c)),
-                    ],
-                    onChanged: (v) => update(() => category = v!),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Preview changes last for this session.',
-                    style: TextStyle(fontSize: 12, color: HomeStyle.muted),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (form.currentState!.validate()) Navigator.pop(context, true);
-              },
-              child: const Text('Save item'),
-            ),
-          ],
-        ),
+  Future<void> _edit([MenuDish? dish]) async {
+    final saved = await Navigator.push<MenuDish>(
+      context,
+      MaterialPageRoute<MenuDish>(
+        builder: (_) =>
+            FoodEditorScreen(dish: dish, onNavigate: widget.onNavigate),
       ),
     );
-    if (saved == true && mounted) {
+    if (saved != null && mounted) {
       setState(() {
         if (dish == null) {
-          _items.add(
-            _Dish(
-              name.text.trim(),
-              description.text.trim(),
-              int.parse(price.text),
-              category,
-              null,
-            ),
-          );
+          _items.add(saved);
         } else {
-          dish.name = name.text.trim();
-          dish.description = description.text.trim();
-          dish.price = int.parse(price.text);
-          dish.category = category;
+          _items[_items.indexOf(dish)] = saved;
         }
       });
     }
-    // Let the dialog's closing animation finish before disposing its fields.
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    name.dispose();
-    description.dispose();
-    price.dispose();
   }
 
-  Future<void> _delete(_Dish dish) async {
+  Future<void> _delete(MenuDish dish) async {
     final yes = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -242,7 +165,14 @@ class _MenuManagementScreenState extends State<MenuManagementScreen> {
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(10),
-                          child: dish.image == null
+                          child: dish.photo != null
+                              ? Image.memory(
+                                  dish.photo!,
+                                  width: 70,
+                                  height: 76,
+                                  fit: BoxFit.cover,
+                                )
+                              : dish.image == null
                               ? const SizedBox(
                                   width: 70,
                                   height: 76,
@@ -354,19 +284,4 @@ class _MenuManagementScreenState extends State<MenuManagementScreen> {
       ],
     );
   }
-}
-
-class _Dish {
-  _Dish(
-    this.name,
-    this.description,
-    this.price,
-    this.category,
-    this.image, {
-    this.available = true,
-  });
-  String name, description, category;
-  int price;
-  final String? image;
-  bool available;
 }

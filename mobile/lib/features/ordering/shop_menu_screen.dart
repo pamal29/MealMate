@@ -9,7 +9,8 @@ import 'food_item_sheet.dart';
 
 class ShopMenuScreen extends StatefulWidget {
   final Tray tray;
-  const ShopMenuScreen({super.key, required this.tray});
+  const ShopMenuScreen({super.key, required this.tray, this.onNavigate});
+  final ValueChanged<int>? onNavigate;
   @override
   State<ShopMenuScreen> createState() => _ShopMenuScreenState();
 }
@@ -174,7 +175,10 @@ class _ShopMenuScreenState extends State<ShopMenuScreen> {
                         : () => Navigator.push(
                             context,
                             MaterialPageRoute<void>(
-                              builder: (_) => CheckoutScreen(tray: widget.tray),
+                              builder: (_) => CheckoutScreen(
+                                tray: widget.tray,
+                                onNavigate: widget.onNavigate,
+                              ),
                             ),
                           ),
                     child: const Row(

@@ -33,7 +33,7 @@ void main() {
     await tester.tap(find.text('View Tray'));
     await tester.pumpAndSettle();
     expect(find.byType(CheckoutScreen), findsOneWidget);
-    expect(find.text('Place Order (LKR 520)'), findsOneWidget);
+    expect(find.text('Place preview order (LKR 520)'), findsOneWidget);
     await tester.tap(
       find.byTooltip('Increase Chicken Fried Rice (SUSL Special)'),
     );

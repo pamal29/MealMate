@@ -10,8 +10,11 @@ import 'package:mealmate/features/home/models/shop.dart';
 import 'package:mealmate/features/ordering/tray.dart';
 import 'package:mealmate/features/ordering/shop_menu_screen.dart';
 import 'package:mealmate/features/ordering/checkout_screen.dart';
+import 'package:mealmate/features/ordering/order_pages.dart';
+import 'package:mealmate/features/ordering/preview_orders.dart';
 
 void main() {
+  setUp(() => PreviewOrders.instance.reset());
   test('Tray computes totals, removes items, caps quantities, and clears packaging', () {
     final tray = Tray(mockShops[1]);
     tray.change(sampleMenu[0], 1);
@@ -50,15 +53,12 @@ void main() {
       await tester.tap(find.byTooltip('Increase Vegetable Samosa (2 pcs)'));
       await tester.pumpAndSettle();
       expect(tray.total, 340);
-      await tester.tap(find.text('Place Order (LKR 340)'));
+      await tester.tap(find.text('Place preview order (LKR 340)'));
       await tester.pumpAndSettle();
-      expect(find.text('Ordering is not available yet'), findsOneWidget);
-      await tester.tap(find.text('Keep browsing'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Clear'));
-      await tester.pumpAndSettle();
-      expect(find.text('Your tray is empty'), findsOneWidget);
+      expect(find.byType(OrderSuccessScreen), findsOneWidget);
+      expect(find.textContaining('no order was sent'), findsOneWidget);
       expect(tray.count, 0);
+      expect(PreviewOrders.instance.orders.first.total, 340);
       expect(tester.takeException(), isNull);
     },
   );

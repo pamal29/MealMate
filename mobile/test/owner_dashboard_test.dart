@@ -45,7 +45,8 @@ void main() {
     expect(find.text('Order History'), findsOneWidget);
     await tester.tap(find.text('Profile'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Back to login'));
+    await tester.ensureVisible(find.text('Account / Back to login'));
+    await tester.tap(find.text('Account / Back to login'));
     await tester.pumpAndSettle();
     expect(find.text('Welcome back'), findsOneWidget);
     expect(tester.takeException(), isNull);

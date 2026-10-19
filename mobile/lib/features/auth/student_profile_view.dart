@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../home/home_style.dart';
+import '../ordering/preview_orders.dart';
 
 class StudentProfileView extends StatefulWidget {
   const StudentProfileView({
@@ -178,7 +179,8 @@ class _StudentProfileViewState extends State<StudentProfileView> {
           Icons.receipt_long_outlined,
           'My Orders',
           widget.onOrders,
-          trailing: '3 sample',
+          trailing:
+              '${PreviewOrders.instance.orders.where((o) => !o.closed).length} sample',
         ),
         _row(
           Icons.notifications_none,

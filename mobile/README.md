@@ -94,9 +94,9 @@ consistently; screenshots supplied different rice prices. Packaging is LKR 40
 per nonempty tray. These screens use sample food and shop data, and sample
 photography listed under `assets/food/SOURCES.txt`.
 
-Place Order currently explains that this is a preview and does not submit an
-order. Live checkout requires actual shop/menu UUIDs and a server-side packaging
-fee policy (the existing API currently calculates only item totals).
+Place preview order creates an in-memory order, clears the tray, and opens the
+success page. No order is sent to the backend. Live checkout still requires actual
+shop/menu UUIDs and a server-side packaging fee policy.
 
 ```powershell
 flutter test test/ordering_test.dart --dart-define=CAPTURE_ORDERING=true
@@ -136,3 +136,26 @@ is sample data even when signed in; live shop/order management is not connected.
 
 Run `flutter test --dart-define=CAPTURE_NEW=true` to save screenshot previews in
 `build/` for these screens. Run `flutter analyze` for static checks.
+
+## Business profile, food forms, and order lifecycle
+
+- Owner Profile opens the business profile. Edit Shop Profile and Edit Opening
+  Hours update local values; Manage Menu returns to the owner Home tab. Profile
+  and menu state survive switching owner tabs but not restarting the app.
+- New Item and each edit button open full Add/Edit Food Item pages. Cancelling
+  discards edits. Save validates name and positive whole-rupee price. Photos use
+  the device picker, accept decodable JPG/PNG files up to 5 MB, and stay in memory.
+  The iOS photo-library usage description is included; iOS was not runtime-tested.
+- Student checkout's Place preview order opens Order Placed, then Track My Order
+  opens details. Preview next status advances Pending → Confirmed → Preparing →
+  Ready. Pending preview orders can be cancelled after confirmation.
+- Orders includes sample rejected/cancelled records with separate closed-state
+  details and no payment due. New preview orders appear in Active immediately.
+  Nothing is transmitted, charged, or reflected in the separate owner order demo.
+- Screenshots for seven screens can be generated with
+  `flutter test --no-pub test/order_pages_test.dart --dart-define=CAPTURE_ORDERS=true`.
+
+On this Windows machine, adding native plugins reported missing desktop symlink
+support. Dependencies were resolved successfully; Android can be run with
+`flutter run --no-pub` after resolution. Windows desktop builds require Windows
+Developer Mode (or symlink privileges). Do not change backend `.env` for previews.

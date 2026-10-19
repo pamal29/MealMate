@@ -41,12 +41,14 @@ void main() {
     expect(find.text('• Out of Stock'), findsNothing);
     await tester.tap(find.text('+ New Item'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Save item'));
     await tester.tap(find.text('Save item'));
     await tester.pumpAndSettle();
     expect(find.text('Enter a name.'), findsOneWidget);
     await tester.enterText(find.byType(TextFormField).at(0), 'Lime Juice');
     await tester.enterText(find.byType(TextFormField).at(1), 'Fresh lime');
     await tester.enterText(find.byType(TextFormField).at(2), '180');
+    await tester.ensureVisible(find.text('Save item'));
     await tester.tap(find.text('Save item'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).first, 'Lime');
@@ -55,6 +57,7 @@ void main() {
     await tester.tap(find.byTooltip('Edit Lime Juice'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).at(2), '190');
+    await tester.ensureVisible(find.text('Save item'));
     await tester.tap(find.text('Save item'));
     await tester.pumpAndSettle();
     expect(find.text('LKR 190'), findsOneWidget);
@@ -72,9 +75,11 @@ void main() {
     await size(tester);
     final tray = Tray(mockShops.first);
     addTearDown(tray.dispose);
-    final font = FontLoader('Inter')..addFont(rootBundle.load('assets/fonts/Inter.ttf'));
+    final font = FontLoader('Inter')
+      ..addFont(rootBundle.load('assets/fonts/Inter.ttf'));
     await font.load();
-    final icons = FontLoader('MaterialIcons')..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
+    final icons = FontLoader('MaterialIcons')
+      ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
     await icons.load();
     final captureKey = GlobalKey();
     await tester.pumpWidget(
@@ -183,10 +188,7 @@ void main() {
     expect(find.text('• Rejected'), findsOneWidget);
     await tester.tap(find.text('Royal Box'));
     await tester.pumpAndSettle();
-    expect(
-      find.textContaining('Sample order for preview only.'),
-      findsOneWidget,
-    );
+    expect(find.text('Order rejected'), findsOneWidget);
   });
 
   testWidgets(

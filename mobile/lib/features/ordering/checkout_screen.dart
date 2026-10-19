@@ -4,10 +4,13 @@ import '../auth/auth_service.dart';
 import '../home/home_style.dart';
 import 'ordering_widgets.dart';
 import 'tray.dart';
+import 'preview_orders.dart';
+import 'order_pages.dart' show OrderSuccessScreen;
 
 class CheckoutScreen extends StatelessWidget {
   final Tray tray;
-  const CheckoutScreen({super.key, required this.tray});
+  const CheckoutScreen({super.key, required this.tray, this.onNavigate});
+  final ValueChanged<int>? onNavigate;
 
   @override
   Widget build(BuildContext context) => Theme(
@@ -197,21 +200,18 @@ class CheckoutScreen extends StatelessWidget {
               child: FilledButton(
                 onPressed: tray.count == 0
                     ? null
-                    : () => showDialog<void>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Ordering is not available yet'),
-                          content: const Text(
-                            'This menu is a preview. Your tray has been saved for this session, but no order has been sent or payment taken.',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Keep browsing'),
+                    : () {
+                        final order = PreviewOrders.instance.place(tray);
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (_) => OrderSuccessScreen(
+                              order: order,
+                              onNavigate: onNavigate,
                             ),
-                          ],
-                        ),
-                      ),
+                          ),
+                        );
+                      },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   child: Row(
@@ -219,7 +219,7 @@ class CheckoutScreen extends StatelessWidget {
                     children: [
                       Flexible(
                         child: Text(
-                          'Place Order (LKR ${tray.total})',
+                          'Place preview order (LKR ${tray.total})',
                           style: const TextStyle(fontSize: 14),
                         ),
                       ),
