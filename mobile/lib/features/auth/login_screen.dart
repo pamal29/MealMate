@@ -427,7 +427,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         builder: (_) => const HomeScreen(isPreview: true),
                       ),
                     ),
-              child: const Text('Explore preview — no login needed'),
+              child: const Text('Explore preview'),
             ),
             const SizedBox(height: 12),
             OutlinedButton(
