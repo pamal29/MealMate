@@ -190,4 +190,48 @@ void main() {
     expect(api.requests, isEmpty);
     expect(find.text('Please sign in to manage orders.'), findsOneWidget);
   });
+  testWidgets('bell shows the pending count and opens pending orders', (
+    tester,
+  ) async {
+    final api = _FakeOrdersApi();
+    await _pumpDashboard(tester, api);
+
+    final bell = find.byTooltip('1 pending order');
+    expect(bell, findsOneWidget);
+    expect(find.descendant(of: bell, matching: find.text('1')), findsOneWidget);
+
+    // From another tab, the bell jumps back to the pending list.
+    await tester.tap(find.text('Home'));
+    await tester.pumpAndSettle();
+    await tester.tap(bell);
+    await tester.pumpAndSettle();
+    expect(find.text('Pending Orders'), findsOneWidget);
+    expect(find.text('Nuwan Perera'), findsOneWidget);
+  });
+
+  testWidgets('bell has no badge when nothing is pending', (tester) async {
+    final api = _FakeOrdersApi();
+    api.orders.first['status'] = 'accepted';
+    await _pumpDashboard(tester, api);
+
+    expect(find.byTooltip('No pending orders'), findsOneWidget);
+  });
+
+  testWidgets('a newly arrived order is announced', (tester) async {
+    final api = _FakeOrdersApi();
+    await _pumpDashboard(tester, api);
+    expect(find.textContaining('New order from'), findsNothing);
+
+    api.orders.insert(0, {
+      ...api.orders.first,
+      'id': 'f00dcafe-0000-4000-8000-000000000002',
+      'student_name': 'Rashmi Silva',
+      'created_at': DateTime.now().toUtc().toIso8601String(),
+    });
+    await tester.tap(find.byTooltip('1 pending order'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('New order from Rashmi Silva'), findsOneWidget);
+    expect(find.byTooltip('2 pending orders'), findsOneWidget);
+  });
 }
