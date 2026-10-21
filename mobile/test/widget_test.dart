@@ -114,8 +114,8 @@ void main() {
         calls++;
       },
     );
-    await tester.ensureVisible(find.text('Explore preview — no login needed'));
-    await tester.tap(find.text('Explore preview — no login needed'));
+    await tester.ensureVisible(find.text('Explore preview'));
+    await tester.tap(find.text('Explore preview'));
     await tester.pumpAndSettle();
     expect(find.text('Preview mode · Sample menu'), findsOneWidget);
     expect(calls, 0);
