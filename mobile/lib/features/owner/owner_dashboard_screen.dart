@@ -42,6 +42,9 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   final _busy = <String>{};
   Timer? _poll;
 
+  /// Pending order ids from the last load, to spot newly arrived orders.
+  Set<String>? _seenPending;
+
   List<_Order> get _orders => widget.isPreview
       ? _previewOrders
       : [for (final order in _live) _Order.live(order, _statusLabel(order))];
@@ -87,10 +90,16 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     try {
       final orders = await OwnerOrdersService.fetch(client: widget.client);
       if (!mounted) return;
+      final pending = orders.where((o) => o.isPending).toList();
+      final arrived = _seenPending == null
+          ? const <OwnerOrder>[]
+          : pending.where((o) => !_seenPending!.contains(o.id)).toList();
+      _seenPending = {for (final o in pending) o.id};
       setState(() {
         _live = orders;
         _error = null;
       });
+      if (arrived.isNotEmpty) _announce(arrived);
     } on OrdersException catch (e) {
       if (!mounted) return;
       setState(() => _error = e.message);
@@ -108,6 +117,33 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     'cancelled' => 'Cancelled',
     final other => other[0].toUpperCase() + other.substring(1),
   };
+
+  /// Tells the owner about orders that arrived since the last refresh.
+  void _announce(List<OwnerOrder> arrived) => ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(
+          arrived.length == 1
+              ? 'New order from ${arrived.single.studentName}'
+              : '${arrived.length} new orders',
+        ),
+        action: SnackBarAction(
+          label: 'View',
+          textColor: HomeStyle.orange,
+          onPressed: _showPending,
+        ),
+      ),
+    );
+
+  /// Opens the pending list, refreshing it first when live.
+  void _showPending() {
+    setState(() {
+      _tab = 1;
+      _history = false;
+    });
+    if (!widget.isPreview) _load(silent: true);
+  }
 
   void _toast(String message) => ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
@@ -203,6 +239,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
         ),
         action: SnackBarAction(
           label: 'Undo',
+          textColor: HomeStyle.orange,
           onPressed: () {
             if (mounted) setState(() => order.status = null);
           },
@@ -252,27 +289,22 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            tooltip: 'Notifications',
-            onPressed: () => _dialog<void>(
-              builder: (_) => AlertDialog(
-                title: const Text('Notifications'),
-                content: Text(
-                  widget.isPreview
-                      ? 'This dashboard uses sample orders. Live notifications are not connected yet.'
-                      : 'New orders appear in the Orders tab, which refreshes every 30 seconds. Pull down to refresh now.',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Close'),
-                  ),
-                ],
+            tooltip: _pending == 0
+                ? 'No pending orders'
+                : '$_pending pending ${_pending == 1 ? 'order' : 'orders'}',
+            onPressed: _showPending,
+            icon: Badge(
+              isLabelVisible: _pending > 0,
+              label: Text('$_pending'),
+              backgroundColor: HomeStyle.orange,
+              textColor: Colors.white,
+              child: Icon(
+                _pending > 0
+                    ? Icons.notifications_active_outlined
+                    : Icons.notifications_none,
+                size: 20,
+                color: _pending > 0 ? Colors.white : HomeStyle.muted,
               ),
-            ),
-            icon: const Icon(
-              Icons.notifications_none,
-              size: 20,
-              color: HomeStyle.muted,
             ),
           ),
           const SizedBox(width: 8),
