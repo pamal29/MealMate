@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+
 import 'core/theme.dart';
-import 'features/home/home_screen.dart';
+import 'features/auth/login_screen.dart';
 
 void main() {
   runApp(const MealMateApp());
@@ -15,7 +16,7 @@ class MealMateApp extends StatelessWidget {
       title: 'MealMate',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: const HomeScreen(),
+      home: const LoginScreen(),
     );
   }
 }
