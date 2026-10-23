@@ -214,7 +214,7 @@ router.get('/shop', requireAuth, requireRole('shop_owner'), async (req, res) => 
     }
 
     const result = await db.query(
-      `SELECT o.id, o.status, o.total, o.pickup_time, o.note, o.created_at,
+      `SELECT o.id, o.status, o.total, o.pickup_time, o.estimated_minutes, o.note, o.created_at,
               u.name AS student_name,
               (SELECT json_agg(
                         json_build_object(
@@ -243,53 +243,51 @@ router.get('/shop', requireAuth, requireRole('shop_owner'), async (req, res) => 
 });
 
 router.patch('/:id/status', requireAuth, requireRole('shop_owner'), async (req, res) => {
-  try{
-    const {id} = req.params;
-    const {status, pickup_time} = req.body;
+  try {
+    const { id } = req.params;
+    const { status, estimated_minutes } = req.body;
 
-    if(!UUID_RE.test(id)){
+    if (!UUID_RE.test(id)) {
       return res.status(400).json({ message: 'Invalid order ID' });
     }
 
-    if(status !== 'accepted' && status !== 'cancelled'){
+    if (status !== 'accepted' && status !== 'cancelled') {
       return res.status(400).json({ message: 'Invalid status' });
     }
 
     let pickupIso = null;
-    if(status === 'accepted'){
-      if (typeof pickup_time !== 'string' || Number.isNaN(Date.parse(pickup_time))) {
-        return res.status(400).json({ message: 'Valid pickup_time (ISO 8601) is required to accept' });
+    let minutes = null;
+
+    if (status === 'accepted') {
+      // Default to 15 minutes if the owner doesn't send a value
+      minutes = estimated_minutes === undefined || estimated_minutes === null
+        ? 15
+        : Number(estimated_minutes);
+
+      if (!Number.isInteger(minutes) || minutes < 5 || minutes > 180) {
+        return res.status(400).json({
+          message: 'estimated_minutes must be a whole number between 5 and 180'
+        });
       }
-      
-      const t = new Date(pickup_time).getTime();
-      const now = Date.now();
-      
-      if (t < now + 5 * 60 * 1000) {
-        return res.status(400).json({ message: 'pickup_time must be at least 5 minutes from now' });
-      }
-      
-      if (t > now + 24 * 60 * 60 * 1000) {
-        return res.status(400).json({ message: 'pickup_time must be within 24 hours' });
-      }
-      
-      pickupIso = new Date(t).toISOString();
+
+      pickupIso = new Date(Date.now() + minutes * 60 * 1000).toISOString();
     }
 
     const result = await db.query(
       `UPDATE orders
-       SET status = $1, pickup_time = $2
-       WHERE id = $3
+       SET status = $1, pickup_time = $2, estimated_minutes = $3
+       WHERE id = $4
          AND status = 'pending'
-         AND shop_id IN (SELECT id FROM shops WHERE owner_id = $4)
-       RETURNING id, status, total, pickup_time, note, created_at`,
-       [status, pickupIso, id, req.user.id]
+         AND shop_id IN (SELECT id FROM shops WHERE owner_id = $5)
+       RETURNING id, status, total, pickup_time, estimated_minutes, note, created_at`,
+      [status, pickupIso, minutes, id, req.user.id]
     );
 
-    if(result.rows.length === 0){
+    if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Order not found or already processed' });
     }
     res.json({ order: result.rows[0] });
-  } catch (err){
+  } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
