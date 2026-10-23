@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import '../home/home_style.dart';
+import '../notifications/notifications_screen.dart';
+import '../notifications/notifications_service.dart';
 import '../ordering/preview_orders.dart';
 
 class StudentProfileView extends StatefulWidget {
@@ -10,10 +13,14 @@ class StudentProfileView extends StatefulWidget {
     required this.onLogout,
     required this.onOrders,
     this.isPreview = false,
+    this.notificationsClient,
   });
   final Map<String, dynamic> user;
   final VoidCallback onLogout, onOrders;
   final bool isPreview;
+
+  /// HTTP client for the notifications API; tests pass a mock.
+  final http.Client? notificationsClient;
   @override
   State<StudentProfileView> createState() => _StudentProfileViewState();
 }
@@ -21,6 +28,30 @@ class StudentProfileView extends StatefulWidget {
 class _StudentProfileViewState extends State<StudentProfileView> {
   bool _notifications = true;
   String? _name, _phone;
+  int _unread = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.isPreview) _loadUnread();
+  }
+
+  Future<void> _loadUnread() async {
+    try {
+      final count = await NotificationsService.unreadCount(
+        client: widget.notificationsClient,
+      );
+      if (mounted) setState(() => _unread = count);
+    } on NotificationsException {
+      // The badge is optional; the screen itself shows any error.
+    }
+  }
+
+  Future<void> _openNotifications() async {
+    await NotificationsScreen.open(context, client: widget.notificationsClient);
+    if (mounted) await _loadUnread();
+  }
+
   void _notice(String title, String message) => showDialog<void>(
     context: context,
     builder: (context) => AlertDialog(
@@ -185,12 +216,15 @@ class _StudentProfileViewState extends State<StudentProfileView> {
         _row(
           Icons.notifications_none,
           'Notifications',
-          () => _notice(
-            'Notifications',
-            _notifications
-                ? 'No new notifications. Live notifications are not connected.'
-                : 'Preview alerts are disabled.',
-          ),
+          widget.isPreview
+              ? () => _notice(
+                  'Notifications',
+                  _notifications
+                      ? 'No new notifications. Live notifications are not connected.'
+                      : 'Preview alerts are disabled.',
+                )
+              : _openNotifications,
+          trailing: !widget.isPreview && _unread > 0 ? '$_unread new' : null,
         ),
         _row(Icons.manage_accounts_outlined, 'Edit Profile', _edit),
         _row(
