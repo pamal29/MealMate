@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../../config/db');
 const { requireAuth, requireRole } = require('../../middleware/auth');
-const { createNotification } = require('../notifications/notifications.service');
+const { createNotification , notifyOrderStatus} = require('../notifications/notifications.service');
 
 
 const router = express.Router();
@@ -171,74 +171,63 @@ router.patch('/:id/cancel', requireAuth, requireRole('student'), async (req, res
 
 router.patch('/:id/status', requireAuth, requireRole('shop_owner'), async (req, res) => {
   const { id } = req.params;
-  const { status, pickup_time } = req.body;
+  const { status, estimated_minutes } = req.body;
 
   if (!UUID_RE.test(id)) {
-    return res.status(400).json({ message: 'Invalid order id' });
-  }
-  if (!['accepted', 'cancelled'].includes(status)) {
-    return res.status(400).json({ message: 'Status must be accepted or cancelled' });
+    return res.status(400).json({ message: 'Invalid order ID' });
   }
 
-  let pickupAt = null;
+  if (status !== 'accepted' && status !== 'cancelled') {
+    return res.status(400).json({ message: 'Invalid status' });
+  }
+
+  let pickupIso = null;
+  let minutes = null;
+
   if (status === 'accepted') {
-    pickupAt = new Date(pickup_time);
-    const now = Date.now();
-    if (
-      typeof pickup_time !== 'string' ||
-      isNaN(pickupAt.getTime()) ||
-      pickupAt.getTime() < now + 5 * 60 * 1000 ||
-      pickupAt.getTime() > now + 24 * 60 * 60 * 1000
-    ) {
+    minutes = estimated_minutes === undefined || estimated_minutes === null
+      ? 15
+      : Number(estimated_minutes);
+
+    if (!Number.isInteger(minutes) || minutes < 5 || minutes > 180) {
       return res.status(400).json({
-        message: 'pickup_time must be 5 minutes to 24 hours from now',
+        message: 'estimated_minutes must be a whole number between 5 and 180',
       });
     }
+
+    pickupIso = new Date(Date.now() + minutes * 60 * 1000).toISOString();
   }
 
   const client = await db.connect();
   try {
     await client.query('BEGIN');
 
-    const { rows } = await client.query(
-      `update orders o
-       set status = $1, pickup_time = $2
-       from shops s
-       where o.id = $3
-         and o.shop_id = s.id
-         and s.owner_id = $4
-         and o.status = 'pending'
-       returning o.id, o.student_id, o.status, o.pickup_time`,
-      [status, pickupAt, id, req.user.id]
+    const result = await client.query(
+      `UPDATE orders
+       SET status = $1, pickup_time = $2, estimated_minutes = $3
+       WHERE id = $4
+         AND status = 'pending'
+         AND shop_id IN (SELECT id FROM shops WHERE owner_id = $5)
+       RETURNING id, student_id, status, total, pickup_time, estimated_minutes, note, created_at`,
+      [status, pickupIso, minutes, id, req.user.id]
     );
 
-    if (rows.length === 0) {
+    if (result.rows.length === 0) {
       await client.query('ROLLBACK');
-      return res.status(404).json({ message: 'Order not found' });
+      return res.status(404).json({ message: 'Order not found or already processed' });
     }
 
-    const order = rows[0];
-    const isAccepted = status === 'accepted';
-    const when = isAccepted
-      ? order.pickup_time.toLocaleString('en-LK', { timeZone: 'Asia/Colombo' })
-      : null;
-
-    await createNotification(client, {
-      userId: order.student_id,
-      orderId: order.id,
-      type: isAccepted ? 'order_accepted' : 'order_cancelled',
-      title: isAccepted ? 'Order accepted' : 'Order cancelled',
-      body: isAccepted
-        ? `Your order is ready for pickup at ${when}.`
-        : 'The shop could not take your order.',
-    });
+    const order = result.rows[0];
+    await notifyOrderStatus(client, order);
 
     await client.query('COMMIT');
-    return res.json({ order });
+
+    const { student_id, ...orderForResponse } = order;
+    res.json({ order: orderForResponse });
   } catch (err) {
-    await client.query('ROLLBACK');
+    await client.query('ROLLBACK').catch(() => {});
     console.error(err);
-    return res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error' });
   } finally {
     client.release();
   }
