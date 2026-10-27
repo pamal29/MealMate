@@ -15,13 +15,22 @@ class MenuDish {
     this.image, {
     this.available = true,
     this.photo,
+    this.id,
   });
   String name, description, category;
-  int price;
+  num price;
   String? image;
   Uint8List? photo;
   bool available;
+
+  /// The menu item's id on the server; null for preview dishes.
+  final String? id;
 }
+
+/// Price without a trailing ".0" for whole rupees, e.g. 480 or 480.50.
+String formatPrice(num price) => price == price.roundToDouble()
+    ? price.round().toString()
+    : price.toStringAsFixed(2);
 
 class FoodEditorScreen extends StatefulWidget {
   const FoodEditorScreen({
@@ -29,10 +38,23 @@ class FoodEditorScreen extends StatefulWidget {
     this.dish,
     this.onNavigate,
     this.pickImage,
+    this.isPreview = true,
+    this.shopName,
+    this.onSave,
   });
   final MenuDish? dish;
   final ValueChanged<int>? onNavigate;
   final Future<XFile?> Function()? pickImage;
+
+  /// Sample data unless the owner dashboard passes false for a signed-in
+  /// owner. Live items have no photo or category, which the backend does
+  /// not store yet.
+  final bool isPreview;
+  final String? shopName;
+
+  /// Saves the dish (live mode). If it throws, the editor stays open and
+  /// shows the error; otherwise it closes and returns the dish.
+  final Future<void> Function(MenuDish dish)? onSave;
   @override
   State<FoodEditorScreen> createState() => _FoodEditorScreenState();
 }
@@ -43,15 +65,17 @@ class _FoodEditorScreenState extends State<FoodEditorScreen> {
   late String _category;
   late bool _available;
   Uint8List? _photo;
-  String? _imageError;
-  bool _picking = false;
+  String? _imageError, _saveError;
+  bool _picking = false, _saving = false;
   @override
   void initState() {
     super.initState();
     final dish = widget.dish;
     _name = TextEditingController(text: dish?.name);
     _description = TextEditingController(text: dish?.description);
-    _price = TextEditingController(text: dish?.price.toString() ?? '0');
+    _price = TextEditingController(
+      text: dish == null ? '0' : formatPrice(dish.price),
+    );
     _category = dish?.category ?? 'Rice & Curry';
     _available = dish?.available ?? true;
     _photo = dish?.photo;
@@ -107,20 +131,37 @@ class _FoodEditorScreenState extends State<FoodEditorScreen> {
     }
   }
 
-  void _save() {
-    if (!_form.currentState!.validate() || _picking) return;
-    Navigator.pop(
-      context,
-      MenuDish(
-        _name.text.trim(),
-        _description.text.trim(),
-        int.parse(_price.text.trim()),
-        _category,
-        widget.dish?.image,
-        available: _available,
-        photo: _photo,
-      ),
+  Future<void> _save() async {
+    if (!_form.currentState!.validate() || _picking || _saving) return;
+    final dish = MenuDish(
+      _name.text.trim(),
+      _description.text.trim(),
+      num.parse(_price.text.trim()),
+      _category,
+      widget.dish?.image,
+      available: _available,
+      photo: _photo,
+      id: widget.dish?.id,
     );
+    final onSave = widget.onSave;
+    if (onSave != null) {
+      setState(() {
+        _saving = true;
+        _saveError = null;
+      });
+      try {
+        await onSave(dish);
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _saving = false;
+            _saveError = '$e';
+          });
+        }
+        return;
+      }
+    }
+    if (mounted) Navigator.pop(context, dish);
   }
 
   @override
@@ -163,9 +204,9 @@ class _FoodEditorScreenState extends State<FoodEditorScreen> {
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          const Text(
-            'Shan Food Cabin',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+          Text(
+            widget.shopName ?? 'Shan Food Cabin',
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 6),
           Text(
@@ -186,54 +227,60 @@ class _FoodEditorScreenState extends State<FoodEditorScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'Food image',
-                    style: TextStyle(fontSize: 11, color: HomeStyle.muted),
-                  ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: _photo != null
-                        ? Image.memory(_photo!, height: 150, fit: BoxFit.cover)
-                        : widget.dish?.image != null
-                        ? Image.asset(
-                            widget.dish!.image!,
-                            height: 150,
-                            fit: BoxFit.cover,
-                          )
-                        : const SizedBox(
-                            height: 150,
-                            child: Icon(
-                              Icons.add_photo_alternate_outlined,
-                              color: HomeStyle.muted,
-                              size: 48,
-                            ),
-                          ),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: _picking ? null : _pick,
-                    icon: const Icon(Icons.upload_outlined, size: 16),
-                    label: Text(
-                      _picking
-                          ? 'Opening photo...'
-                          : _photo != null || widget.dish?.image != null
-                          ? 'Change image'
-                          : 'Upload image',
+                  if (widget.isPreview) ...[
+                    const Text(
+                      'Food image',
+                      style: TextStyle(fontSize: 11, color: HomeStyle.muted),
                     ),
-                  ),
-                  const Text(
-                    'JPG or PNG, up to 5 MB. Use a clear food photo.',
-                    style: TextStyle(color: HomeStyle.muted, fontSize: 10),
-                  ),
-                  if (_imageError != null)
-                    Text(
-                      _imageError!,
-                      style: const TextStyle(
-                        color: Colors.redAccent,
-                        fontSize: 12,
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: _photo != null
+                          ? Image.memory(
+                              _photo!,
+                              height: 150,
+                              fit: BoxFit.cover,
+                            )
+                          : widget.dish?.image != null
+                          ? Image.asset(
+                              widget.dish!.image!,
+                              height: 150,
+                              fit: BoxFit.cover,
+                            )
+                          : const SizedBox(
+                              height: 150,
+                              child: Icon(
+                                Icons.add_photo_alternate_outlined,
+                                color: HomeStyle.muted,
+                                size: 48,
+                              ),
+                            ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _picking ? null : _pick,
+                      icon: const Icon(Icons.upload_outlined, size: 16),
+                      label: Text(
+                        _picking
+                            ? 'Opening photo...'
+                            : _photo != null || widget.dish?.image != null
+                            ? 'Change image'
+                            : 'Upload image',
                       ),
                     ),
-                  const SizedBox(height: 20),
+                    const Text(
+                      'JPG or PNG, up to 5 MB. Use a clear food photo.',
+                      style: TextStyle(color: HomeStyle.muted, fontSize: 10),
+                    ),
+                    if (_imageError != null)
+                      Text(
+                        _imageError!,
+                        style: const TextStyle(
+                          color: Colors.redAccent,
+                          fontSize: 12,
+                        ),
+                      ),
+                    const SizedBox(height: 20),
+                  ],
                   TextFormField(
                     controller: _name,
                     decoration: const InputDecoration(labelText: 'Item name *'),
@@ -249,22 +296,24 @@ class _FoodEditorScreenState extends State<FoodEditorScreen> {
                       helperText: 'Describe ingredients and portion size.',
                     ),
                   ),
-                  const SizedBox(height: 18),
-                  DropdownButtonFormField<String>(
-                    initialValue: _category,
-                    decoration: const InputDecoration(
-                      labelText: 'Food category *',
+                  if (widget.isPreview) ...[
+                    const SizedBox(height: 18),
+                    DropdownButtonFormField<String>(
+                      initialValue: _category,
+                      decoration: const InputDecoration(
+                        labelText: 'Food category *',
+                      ),
+                      items: [
+                        for (final c in [
+                          'Rice & Curry',
+                          'Short Eats',
+                          'Beverages',
+                        ])
+                          DropdownMenuItem(value: c, child: Text(c)),
+                      ],
+                      onChanged: (v) => setState(() => _category = v!),
                     ),
-                    items: [
-                      for (final c in [
-                        'Rice & Curry',
-                        'Short Eats',
-                        'Beverages',
-                      ])
-                        DropdownMenuItem(value: c, child: Text(c)),
-                    ],
-                    onChanged: (v) => setState(() => _category = v!),
-                  ),
+                  ],
                   const SizedBox(height: 18),
                   TextFormField(
                     controller: _price,
@@ -274,7 +323,7 @@ class _FoodEditorScreenState extends State<FoodEditorScreen> {
                       prefixText: 'LKR  ',
                       helperText: 'Price per portion in Sri Lankan rupees.',
                     ),
-                    validator: (v) => (int.tryParse(v?.trim() ?? '') ?? 0) <= 0
+                    validator: (v) => (num.tryParse(v?.trim() ?? '') ?? 0) <= 0
                         ? 'Enter a price greater than LKR 0.'
                         : null,
                   ),
@@ -301,14 +350,20 @@ class _FoodEditorScreenState extends State<FoodEditorScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          const Text(
-            'Preview · Changes are not published',
-            style: TextStyle(color: HomeStyle.muted, fontSize: 10),
-          ),
+          if (widget.isPreview)
+            const Text(
+              'Preview · Changes are not published',
+              style: TextStyle(color: HomeStyle.muted, fontSize: 10),
+            ),
+          if (_saveError != null)
+            Text(
+              _saveError!,
+              style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+            ),
           const SizedBox(height: 14),
           FilledButton(
-            onPressed: _picking ? null : _save,
-            child: const Text('Save item'),
+            onPressed: _picking || _saving ? null : _save,
+            child: Text(_saving ? 'Saving...' : 'Save item'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),

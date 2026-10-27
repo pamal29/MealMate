@@ -65,6 +65,11 @@ class _FakeOrdersApi {
     return http.Response(jsonEncode({'message': 'Not found'}), 404);
   });
 
+  /// Order list requests only (the dashboard also loads the shop and menu).
+  List<http.Request> get orderGets => requests
+      .where((r) => r.method == 'GET' && r.url.path == '/api/orders/shop')
+      .toList();
+
   List<http.Request> get patches =>
       requests.where((r) => r.method == 'PATCH').toList();
 }
@@ -88,7 +93,7 @@ void main() {
     final api = _FakeOrdersApi();
     await _pumpDashboard(tester, api);
 
-    final get = api.requests.single;
+    final get = api.orderGets.single;
     expect(get.url.path, '/api/orders/shop');
     expect(get.headers['Authorization'], 'Bearer owner-token');
 
@@ -179,7 +184,7 @@ void main() {
       findsOneWidget,
     );
     // It reloads the list after the failed action.
-    expect(api.requests.where((r) => r.method == 'GET'), hasLength(2));
+    expect(api.orderGets, hasLength(2));
   });
 
   testWidgets('without a session it asks the owner to sign in', (tester) async {

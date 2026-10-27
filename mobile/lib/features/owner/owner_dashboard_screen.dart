@@ -8,6 +8,7 @@ import '../auth/profile_screen.dart';
 import '../home/home_style.dart';
 import 'menu_management_screen.dart';
 import 'owner_orders_service.dart';
+import 'owner_shop_service.dart';
 import 'shop_profile_screen.dart';
 
 class OwnerDashboardScreen extends StatefulWidget {
@@ -42,6 +43,10 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
   final _busy = <String>{};
   Timer? _poll;
 
+  OwnerShop? _shop;
+  bool _shopLoading = false;
+  String? _shopError;
+
   /// Pending order ids from the last load, to spot newly arrived orders.
   Set<String>? _seenPending;
 
@@ -63,11 +68,29 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
         .length;
   }
 
+  bool get _isOpen => widget.isPreview || (_shop?.isOpen ?? false);
+
+  Future<void> _loadShop() async {
+    setState(() {
+      _shopLoading = true;
+      _shopError = null;
+    });
+    try {
+      final shop = await OwnerShopService.myShop(client: widget.client);
+      if (mounted) setState(() => _shop = shop);
+    } on ShopException catch (e) {
+      if (mounted) setState(() => _shopError = e.message);
+    } finally {
+      if (mounted) setState(() => _shopLoading = false);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     if (!widget.isPreview) {
       _load();
+      _loadShop();
       _poll = Timer.periodic(
         const Duration(seconds: 30),
         (_) => _load(silent: true),
@@ -313,7 +336,14 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       body: IndexedStack(
         index: _tab,
         children: [
-          MenuManagementScreen(onNavigate: (i) => setState(() => _tab = i)),
+          MenuManagementScreen(
+            // Re-created when the shop appears, so the menu reloads.
+            key: ValueKey(_shop?.id),
+            onNavigate: (i) => setState(() => _tab = i),
+            isPreview: widget.isPreview,
+            shopName: _shop?.name,
+            client: widget.client,
+          ),
           RefreshIndicator(
             onRefresh: widget.isPreview ? () async {} : _load,
             child: ListView(
@@ -331,22 +361,30 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Shan Food Cabin',
-                              style: TextStyle(
+                              widget.isPreview
+                                  ? 'Shan Food Cabin'
+                                  : _shop?.name ??
+                                        (_shopLoading ? '' : 'No shop yet'),
+                              style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w600,
                                 letterSpacing: -.6,
                               ),
                             ),
-                            SizedBox(height: 4),
+                            const SizedBox(height: 4),
                             Text(
-                              'Y junction',
-                              style: TextStyle(
+                              widget.isPreview
+                                  ? 'Y junction'
+                                  : _shop?.location ??
+                                        (_shopLoading
+                                            ? ''
+                                            : 'Set it up in the Profile tab'),
+                              style: const TextStyle(
                                 fontSize: 11,
                                 color: HomeStyle.muted,
                               ),
@@ -354,13 +392,22 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      const Icon(Icons.circle, size: 7, color: HomeStyle.green),
-                      const SizedBox(width: 4),
-                      const Text(
-                        'Open',
-                        style: TextStyle(fontSize: 11, color: HomeStyle.green),
-                      ),
+                      if (widget.isPreview || _shop != null) ...[
+                        const SizedBox(width: 12),
+                        Icon(
+                          Icons.circle,
+                          size: 7,
+                          color: _isOpen ? HomeStyle.green : HomeStyle.muted,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _isOpen ? 'Open' : 'Closed',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: _isOpen ? HomeStyle.green : HomeStyle.muted,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -470,6 +517,13 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
             ),
           ),
           ShopProfileScreen(
+            isPreview: widget.isPreview,
+            shop: _shop,
+            shopLoading: _shopLoading,
+            shopError: _shopError,
+            onShopChanged: (shop) => setState(() => _shop = shop),
+            onRetry: _loadShop,
+            client: widget.client,
             onManageMenu: () => setState(() => _tab = 0),
             onAccount: () {
               if (widget.isPreview) {
