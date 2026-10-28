@@ -196,7 +196,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       order,
       () => OwnerOrdersService.accept(
         order.serverId!,
-        DateTime.now().add(Duration(minutes: minutes)),
+        minutes,
         client: widget.client,
       ),
       'Order #${order.id} accepted. The student has been notified.',

@@ -112,13 +112,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Ready for pickup in'), findsOneWidget);
     final before = DateTime.now();
-    await tester.tap(find.text('15 minutes'));
+    // Not 15, which is the backend's default when no time is sent.
+    await tester.tap(find.text('20 minutes'));
     await tester.pumpAndSettle();
 
     final body = jsonDecode(api.patches.single.body) as Map<String, dynamic>;
     expect(body['status'], 'accepted');
+    expect(body['estimated_minutes'], 20);
     final pickup = DateTime.parse(body['pickup_time'] as String);
-    expect(pickup.difference(before).inMinutes, inInclusiveRange(14, 15));
+    expect(pickup.difference(before).inMinutes, inInclusiveRange(19, 20));
     expect(
       find.text('Order #A1B2C3D4 accepted. The student has been notified.'),
       findsOneWidget,

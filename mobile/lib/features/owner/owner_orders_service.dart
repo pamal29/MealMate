@@ -61,18 +61,26 @@ class OwnerOrdersService {
         .toList();
   }
 
-  /// Accepts a pending order. The backend requires a pickup time between
-  /// 5 minutes and 24 hours from now, and notifies the student.
+  /// Accepts a pending order that will be ready in [minutes]; the backend
+  /// notifies the student.
+  ///
+  /// Sends both `estimated_minutes` and the matching `pickup_time`, because
+  /// the backend is moving from a pickup time to estimated minutes and each
+  /// version ignores the field it doesn't use.
   static Future<void> accept(
     String orderId,
-    DateTime pickupTime, {
+    int minutes, {
     http.Client? client,
   }) => _send(
     'PATCH',
     '/api/orders/$orderId/status',
     body: {
       'status': 'accepted',
-      'pickup_time': pickupTime.toUtc().toIso8601String(),
+      'estimated_minutes': minutes,
+      'pickup_time': DateTime.now()
+          .add(Duration(minutes: minutes))
+          .toUtc()
+          .toIso8601String(),
     },
     client: client,
   );
