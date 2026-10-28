@@ -1,10 +1,7 @@
 const router = require('express').Router();
 const db = require('../../config/db');
-const {requireAuth}  = require('../../middleware/auth');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-router.use(requireAuth);
 
 router.get('/', async (req, res) => {
   try{
@@ -20,8 +17,11 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', async (req, res, next) => {
   const {id} = req.params;
+
+  // '/mine' belongs to the owner routes mounted after this router.
+  if (id === 'mine') return next();
 
   if (!UUID_RE.test(id)) {
     return res.status(400).json({ message: 'Invalid shop ID format' });
