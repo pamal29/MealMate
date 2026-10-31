@@ -65,6 +65,11 @@ class _FakeOrdersApi {
     return http.Response(jsonEncode({'message': 'Not found'}), 404);
   });
 
+  /// Order list requests only (the dashboard also loads the shop and menu).
+  List<http.Request> get orderGets => requests
+      .where((r) => r.method == 'GET' && r.url.path == '/api/orders/shop')
+      .toList();
+
   List<http.Request> get patches =>
       requests.where((r) => r.method == 'PATCH').toList();
 }
@@ -88,7 +93,7 @@ void main() {
     final api = _FakeOrdersApi();
     await _pumpDashboard(tester, api);
 
-    final get = api.requests.single;
+    final get = api.orderGets.single;
     expect(get.url.path, '/api/orders/shop');
     expect(get.headers['Authorization'], 'Bearer owner-token');
 
@@ -112,13 +117,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Ready for pickup in'), findsOneWidget);
     final before = DateTime.now();
-    await tester.tap(find.text('15 minutes'));
+    // Not 15, which is the backend's default when no time is sent.
+    await tester.tap(find.text('20 minutes'));
     await tester.pumpAndSettle();
 
     final body = jsonDecode(api.patches.single.body) as Map<String, dynamic>;
     expect(body['status'], 'accepted');
+    expect(body['estimated_minutes'], 20);
     final pickup = DateTime.parse(body['pickup_time'] as String);
-    expect(pickup.difference(before).inMinutes, inInclusiveRange(14, 15));
+    expect(pickup.difference(before).inMinutes, inInclusiveRange(19, 20));
     expect(
       find.text('Order #A1B2C3D4 accepted. The student has been notified.'),
       findsOneWidget,
@@ -179,7 +186,7 @@ void main() {
       findsOneWidget,
     );
     // It reloads the list after the failed action.
-    expect(api.requests.where((r) => r.method == 'GET'), hasLength(2));
+    expect(api.orderGets, hasLength(2));
   });
 
   testWidgets('without a session it asks the owner to sign in', (tester) async {
@@ -189,5 +196,49 @@ void main() {
 
     expect(api.requests, isEmpty);
     expect(find.text('Please sign in to manage orders.'), findsOneWidget);
+  });
+  testWidgets('bell shows the pending count and opens pending orders', (
+    tester,
+  ) async {
+    final api = _FakeOrdersApi();
+    await _pumpDashboard(tester, api);
+
+    final bell = find.byTooltip('1 pending order');
+    expect(bell, findsOneWidget);
+    expect(find.descendant(of: bell, matching: find.text('1')), findsOneWidget);
+
+    // From another tab, the bell jumps back to the pending list.
+    await tester.tap(find.text('Home'));
+    await tester.pumpAndSettle();
+    await tester.tap(bell);
+    await tester.pumpAndSettle();
+    expect(find.text('Pending Orders'), findsOneWidget);
+    expect(find.text('Nuwan Perera'), findsOneWidget);
+  });
+
+  testWidgets('bell has no badge when nothing is pending', (tester) async {
+    final api = _FakeOrdersApi();
+    api.orders.first['status'] = 'accepted';
+    await _pumpDashboard(tester, api);
+
+    expect(find.byTooltip('No pending orders'), findsOneWidget);
+  });
+
+  testWidgets('a newly arrived order is announced', (tester) async {
+    final api = _FakeOrdersApi();
+    await _pumpDashboard(tester, api);
+    expect(find.textContaining('New order from'), findsNothing);
+
+    api.orders.insert(0, {
+      ...api.orders.first,
+      'id': 'f00dcafe-0000-4000-8000-000000000002',
+      'student_name': 'Rashmi Silva',
+      'created_at': DateTime.now().toUtc().toIso8601String(),
+    });
+    await tester.tap(find.byTooltip('1 pending order'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('New order from Rashmi Silva'), findsOneWidget);
+    expect(find.byTooltip('2 pending orders'), findsOneWidget);
   });
 }
