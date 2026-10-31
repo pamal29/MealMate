@@ -2,7 +2,8 @@ const router = require('express').Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../../config/db');
-const { requireAuth } = require('../../middleware/auth');
+const { requireAuth, requireRole } = require('../../middleware/auth');
+
 
 router.post('/register', async (req, res) => {
   const { name, email, password, role = 'student' } = req.body;
@@ -56,7 +57,7 @@ router.post('/login', async (req, res) => {
 
     const result = await db.query(
       'SELECT id, name, email, password_hash, role FROM users WHERE email = $1',
-      [email]
+      [email.toLowerCase().trim()]
     );
 
     const user = result.rows[0];

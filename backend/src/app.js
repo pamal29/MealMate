@@ -15,6 +15,7 @@ app.use('/api/shops', require('./modules/shops/shops.routes'));
 app.use('/api/menu', require('./modules/menu/menu.routes'));
 app.use('/api/orders', require('./modules/orders/orders.routes'));
 app.use('/api/notifications', require('./modules/notifications/notifications.routes'));
+app.use('/api/admin', require('./modules/admin/admin.routes'));
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'mealmate-api' });
