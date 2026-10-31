@@ -9,7 +9,13 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key, this.onRegister = AuthService.register});
-  final Future<void> Function(String, String, String, {String role}) onRegister;
+  final Future<void> Function(
+    String name,
+    String email,
+    String password, {
+    String role,
+    String? phone,
+  }) onRegister;
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
@@ -60,12 +66,11 @@ Future<void> _submit() async {
       _email.text.trim(),
       _password.text,
       role: _role,
+      phone: _phone.text.trim().isNotEmpty 
+        ? null
+        : _phone.text.trim(),
     );
 
-    if (AuthService.user != null &&
-        _phone.text.trim().isNotEmpty) {
-      AuthService.user!['phone'] = _phone.text.trim();
-    }
 
     if (!mounted) return;
 

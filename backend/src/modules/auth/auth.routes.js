@@ -6,7 +6,7 @@ const { requireAuth, requireRole } = require('../../middleware/auth');
 
 
 router.post('/register', async (req, res) => {
-  const { name, email, password, role = 'student' } = req.body;
+  const { name, email, password, phone, role = 'student' } = req.body;
 
   if (
   typeof name !== 'string' ||
@@ -26,10 +26,10 @@ router.post('/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
 
     const { rows } = await db.query(
-      `insert into users (name, email, password_hash, role)
-       values ($1, lower($2), $3, $4)
+      `insert into users (name, email, password_hash, role, phone)
+       values ($1, lower($2), $3, $4, $5)
        returning id, name, email, role`,
-      [name, email, passwordHash, role]
+      [name.trim(), email, passwordHash, role, phone?.trim() || null]
     );
     const user = rows[0];
 
@@ -63,7 +63,7 @@ router.post('/login', async (req, res) => {
     }
 
     const result = await db.query(
-      'SELECT id, name, email, password_hash, role FROM users WHERE email = $1',
+      'SELECT id, name, email, password_hash, role, phone FROM users WHERE email = $1',
       [email.toLowerCase().trim()]
     );
 
@@ -95,7 +95,7 @@ router.post('/login', async (req, res) => {
 router.get('/me', requireAuth, async (req, res) => {
   try {
     const result = await db.query(
-      'SELECT id, name, email, role, created_at FROM users WHERE id = $1',
+      'SELECT id, name, email, role, phone, created_at FROM users WHERE id = $1',
       [req.user.id]
     );
 
