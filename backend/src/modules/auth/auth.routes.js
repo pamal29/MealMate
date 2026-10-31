@@ -8,7 +8,14 @@ const { requireAuth, requireRole } = require('../../middleware/auth');
 router.post('/register', async (req, res) => {
   const { name, email, password, role = 'student' } = req.body;
 
-  if (!name || !email || !password || password.length < 6) {
+  if (
+  typeof name !== 'string' ||
+  !name.trim() ||
+  typeof email !== 'string' ||
+  !email.trim() ||
+  typeof password !== 'string' ||
+  password.length < 6
+  ) {
     return res.status(400).json({ message: 'name, email and password (min 6 chars) are required' });
   }
   if (!['student', 'shop_owner'].includes(role)) {
