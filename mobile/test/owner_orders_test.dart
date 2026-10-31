@@ -65,6 +65,11 @@ class _FakeOrdersApi {
     return http.Response(jsonEncode({'message': 'Not found'}), 404);
   });
 
+  /// Order list requests only (the dashboard also loads the shop and menu).
+  List<http.Request> get orderGets => requests
+      .where((r) => r.method == 'GET' && r.url.path == '/api/orders/shop')
+      .toList();
+
   List<http.Request> get patches =>
       requests.where((r) => r.method == 'PATCH').toList();
 }
@@ -88,7 +93,7 @@ void main() {
     final api = _FakeOrdersApi();
     await _pumpDashboard(tester, api);
 
-    final get = api.requests.single;
+    final get = api.orderGets.single;
     expect(get.url.path, '/api/orders/shop');
     expect(get.headers['Authorization'], 'Bearer owner-token');
 
@@ -112,13 +117,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Ready for pickup in'), findsOneWidget);
     final before = DateTime.now();
-    await tester.tap(find.text('15 minutes'));
+    // Not 15, which is the backend's default when no time is sent.
+    await tester.tap(find.text('20 minutes'));
     await tester.pumpAndSettle();
 
     final body = jsonDecode(api.patches.single.body) as Map<String, dynamic>;
     expect(body['status'], 'accepted');
+    expect(body['estimated_minutes'], 20);
     final pickup = DateTime.parse(body['pickup_time'] as String);
-    expect(pickup.difference(before).inMinutes, inInclusiveRange(14, 15));
+    expect(pickup.difference(before).inMinutes, inInclusiveRange(19, 20));
     expect(
       find.text('Order #A1B2C3D4 accepted. The student has been notified.'),
       findsOneWidget,
@@ -179,7 +186,7 @@ void main() {
       findsOneWidget,
     );
     // It reloads the list after the failed action.
-    expect(api.requests.where((r) => r.method == 'GET'), hasLength(2));
+    expect(api.orderGets, hasLength(2));
   });
 
   testWidgets('without a session it asks the owner to sign in', (tester) async {
