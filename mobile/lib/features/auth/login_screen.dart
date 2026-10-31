@@ -37,37 +37,51 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    if (_loading || !_form.currentState!.validate()) return;
-    FocusScope.of(context).unfocus();
+  
+Future<void> _submit() async {
+  if (_loading || !_form.currentState!.validate()) return;
+
+  FocusScope.of(context).unfocus();
+
+  setState(() {
+    _loading = true;
+    _error = null;
+  });
+
+  try {
+    await AuthService.login(
+      _email.text.trim(),
+      _password.text,
+    );
+
+    if (!mounted) return;
+
+    TextInput.finishAutofillContext();
+
+    final role = AuthService.user?['role'];
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (_) => role == 'shop_owner'
+            ? const OwnerDashboardScreen()
+            : const HomeScreen(),
+      ),
+    );
+  } on AuthException catch (e) {
+    if (!mounted) return;
+    setState(() => _error = e.message);
+  } catch (_) {
+    if (!mounted) return;
     setState(() {
-      _loading = true;
-      _error = null;
+      _error = 'Could not connect. Check your connection and try again.';
     });
-    try {
-      await widget.onLogin(_email.text.trim(), _password.text);
-      if (!mounted) return;
-      TextInput.finishAutofillContext();
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) => AuthService.user?['role'] == 'shop_owner'
-              ? const OwnerDashboardScreen()
-              : const HomeScreen(),
-        ),
-      );
-    } on AuthException catch (error) {
-      if (mounted) setState(() => _error = error.message);
-    } catch (_) {
-      if (mounted) {
-        setState(
-          () => _error =
-              'Could not connect. Check your connection and try again.',
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _loading = false);
+  } finally {
+    if (mounted) {
+      setState(() => _loading = false);
     }
   }
+}
+
 
   void _unavailable(String feature) {
     showDialog<void>(
