@@ -100,7 +100,7 @@ void main() {
         final context = tester.element(find.byType(ShopMenuScreen));
         await precacheImage(AssetImage(tray.shop.imageAsset), context);
         if (!context.mounted) return;
-        await precacheImage(AssetImage(sampleMenu.first.image), context);
+        await precacheImage(AssetImage(sampleMenu.first.image!), context);
       });
       await tester.pumpAndSettle();
       await tester.runAsync(() async {

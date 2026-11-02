@@ -49,10 +49,7 @@ Future<void> _submit() async {
   });
 
   try {
-    await AuthService.login(
-      _email.text.trim(),
-      _password.text,
-    );
+    await widget.onLogin(_email.text.trim(), _password.text);
 
     if (!mounted) return;
 

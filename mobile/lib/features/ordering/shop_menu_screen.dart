@@ -4,6 +4,7 @@ import '../home/home_style.dart';
 import '../home/widgets/category_chips.dart';
 import 'checkout_screen.dart';
 import 'ordering_widgets.dart';
+import 'student_api.dart';
 import 'tray.dart';
 import 'food_item_sheet.dart';
 
@@ -18,6 +19,32 @@ class ShopMenuScreen extends StatefulWidget {
 class _ShopMenuScreenState extends State<ShopMenuScreen> {
   String _category = 'Popular';
   bool _favourite = false;
+  bool _loading = false;
+  String? _error;
+
+  bool get _live => widget.tray.live;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_live) _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final items = await StudentApi.menu(widget.tray.shop.id);
+      if (mounted) widget.tray.setMenu(items);
+    } on StudentApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Theme(
     data: HomeStyle.theme,
@@ -41,12 +68,23 @@ class _ShopMenuScreenState extends State<ShopMenuScreen> {
           children: [
             Stack(
               children: [
-                Image.asset(
-                  widget.tray.shop.imageAsset,
-                  height: 255,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
+                if (widget.tray.shop.imageAsset.isEmpty)
+                  const SizedBox(
+                    height: 140,
+                    width: double.infinity,
+                    child: Icon(
+                      Icons.storefront_outlined,
+                      size: 56,
+                      color: HomeStyle.orange,
+                    ),
+                  )
+                else
+                  Image.asset(
+                    widget.tray.shop.imageAsset,
+                    height: 255,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
                 const Positioned.fill(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
@@ -82,49 +120,88 @@ class _ShopMenuScreenState extends State<ShopMenuScreen> {
                       Container(
                         width: 5,
                         height: 5,
-                        decoration: const BoxDecoration(
-                          color: HomeStyle.green,
+                        decoration: BoxDecoration(
+                          color: widget.tray.shop.isOpen
+                              ? HomeStyle.green
+                              : HomeStyle.muted,
                           shape: BoxShape.circle,
                         ),
                       ),
                       const SizedBox(width: 4),
-                      const Text(
-                        'Open Now',
-                        style: TextStyle(fontSize: 10, color: HomeStyle.muted),
+                      Text(
+                        widget.tray.shop.isOpen ? 'Open Now' : 'Closed',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: HomeStyle.muted,
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Open till 7:00 PM',
-                    style: TextStyle(fontSize: 12, color: HomeStyle.muted),
+                  Text(
+                    _live ? widget.tray.shop.location : 'Open till 7:00 PM',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: HomeStyle.muted,
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      _badge(
-                        Icons.star,
-                        '${widget.tray.shop.rating} (184)',
-                        HomeStyle.orange,
-                      ),
-                      const SizedBox(width: 10),
-                      _badge(Icons.schedule, '10–15 mins', HomeStyle.muted),
-                    ],
-                  ),
+                  if (!_live) ...[
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        _badge(
+                          Icons.star,
+                          '${widget.tray.shop.rating} (184)',
+                          HomeStyle.orange,
+                        ),
+                        const SizedBox(width: 10),
+                        _badge(Icons.schedule, '10–15 mins', HomeStyle.muted),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
-            CategoryChips(
-              categories: const [
-                'Popular',
-                'Rice & Curry',
-                'Short Eats',
-                'Beverages',
-              ],
-              selected: _category,
-              onSelected: (category) => setState(() => _category = category),
-            ),
-            const SizedBox(height: 20),
+            // Live menu items have no category yet.
+            if (!_live) ...[
+              CategoryChips(
+                categories: const [
+                  'Popular',
+                  'Rice & Curry',
+                  'Short Eats',
+                  'Beverages',
+                ],
+                selected: _category,
+                onSelected: (category) => setState(() => _category = category),
+              ),
+              const SizedBox(height: 20),
+            ],
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    Text(_error!, textAlign: TextAlign.center),
+                    TextButton(onPressed: _load, child: const Text('Retry')),
+                  ],
+                ),
+              )
+            else if (_loading && widget.tray.menu.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_live && widget.tray.menu.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(
+                  child: Text(
+                    'This shop has no items available right now.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: HomeStyle.muted),
+                  ),
+                ),
+              ),
             if (_category == 'Beverages')
               const Padding(
                 padding: EdgeInsets.all(32),
@@ -135,7 +212,7 @@ class _ShopMenuScreenState extends State<ShopMenuScreen> {
                   ),
                 ),
               ),
-            for (final item in sampleMenu.where(
+            for (final item in widget.tray.menu.where(
               (item) => _category == 'Popular' || item.category == _category,
             ))
               _food(item),
@@ -165,7 +242,7 @@ class _ShopMenuScreenState extends State<ShopMenuScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '${widget.tray.count} ${widget.tray.count == 1 ? 'Item' : 'Items'} in Tray • LKR ${widget.tray.subtotal}',
+                      '${widget.tray.count} ${widget.tray.count == 1 ? 'Item' : 'Items'} in Tray • LKR ${money(widget.tray.subtotal)}',
                       style: const TextStyle(fontSize: 12),
                     ),
                   ),
@@ -250,7 +327,7 @@ class _ShopMenuScreenState extends State<ShopMenuScreen> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(
-                      'LKR ${item.price}',
+                      'LKR ${money(item.price)}',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,

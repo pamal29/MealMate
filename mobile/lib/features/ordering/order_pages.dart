@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../home/home_style.dart';
+import 'live_orders.dart';
 import 'preview_orders.dart';
+import 'student_api.dart';
+import 'tray.dart' show money;
 
 Color orderColor(OrderStatus status) => switch (status) {
   OrderStatus.rejected => Colors.redAccent,
@@ -95,7 +98,7 @@ class OrderSummary extends StatelessWidget {
   const OrderSummary({super.key, required this.order, this.images = true});
   final PreviewOrder order;
   final bool images;
-  Widget amount(String name, int amount) => Padding(
+  Widget amount(String name, num amount) => Padding(
     padding: const EdgeInsets.only(top: 10),
     child: Row(
       children: [
@@ -105,7 +108,7 @@ class OrderSummary extends StatelessWidget {
             style: const TextStyle(color: HomeStyle.muted, fontSize: 12),
           ),
         ),
-        Text('LKR $amount', style: const TextStyle(fontSize: 12)),
+        Text('LKR ${money(amount)}', style: const TextStyle(fontSize: 12)),
       ],
     ),
   );
@@ -164,7 +167,10 @@ class OrderSummary extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                Text('LKR ${line.total}', style: const TextStyle(fontSize: 11)),
+                Text(
+                  'LKR ${money(line.total)}',
+                  style: const TextStyle(fontSize: 11),
+                ),
               ],
             ),
           ),
@@ -181,7 +187,7 @@ class OrderSummary extends StatelessWidget {
               ),
             ),
             Text(
-              'LKR ${order.total}',
+              'LKR ${money(order.total)}',
               style: const TextStyle(
                 color: HomeStyle.orange,
                 fontWeight: FontWeight.w700,
@@ -219,10 +225,16 @@ class OrderSuccessScreen extends StatelessWidget {
           style: TextStyle(fontSize: 25, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 14),
-        const Text(
-          'Preview only — no order was sent to a shop.\nFollow its sample progress below.',
+        Text(
+          order.isLive
+              ? 'Your order was sent to ${order.shop}.\nYou will be notified when the shop responds.'
+              : 'Preview only — no order was sent to a shop.\nFollow its sample progress below.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: HomeStyle.muted, fontSize: 12, height: 1.6),
+          style: const TextStyle(
+            color: HomeStyle.muted,
+            fontSize: 12,
+            height: 1.6,
+          ),
         ),
         const SizedBox(height: 24),
         Text(
@@ -244,10 +256,12 @@ class OrderSuccessScreen extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         OrderSummary(order: order, images: false),
-        const Text(
-          'Cash on Delivery · Preview, no payment taken',
+        Text(
+          order.isLive
+              ? 'Cash on Delivery · Pay when you receive your food'
+              : 'Cash on Delivery · Preview, no payment taken',
           textAlign: TextAlign.center,
-          style: TextStyle(color: HomeStyle.muted, fontSize: 11),
+          style: const TextStyle(color: HomeStyle.muted, fontSize: 11),
         ),
         const SizedBox(height: 24),
         FilledButton(
@@ -275,10 +289,19 @@ class OrderSuccessScreen extends StatelessWidget {
   );
 }
 
-class OrderDetailsScreen extends StatelessWidget {
+class OrderDetailsScreen extends StatefulWidget {
   const OrderDetailsScreen({super.key, required this.order, this.onNavigate});
   final PreviewOrder order;
   final ValueChanged<int>? onNavigate;
+  @override
+  State<OrderDetailsScreen> createState() => _OrderDetailsScreenState();
+}
+
+class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
+  PreviewOrder get order => widget.order;
+  ValueChanged<int>? get onNavigate => widget.onNavigate;
+  bool _cancelling = false;
+
   void _go(BuildContext context, int index) {
     if (onNavigate != null) {
       onNavigate!(index);
@@ -287,9 +310,49 @@ class OrderDetailsScreen extends StatelessWidget {
     }
   }
 
+  Future<void> _cancel() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(order.isLive ? 'Cancel order?' : 'Cancel preview order?'),
+        content: Text(
+          order.isLive
+              ? 'The shop will no longer receive this order.'
+              : 'This only updates the local preview.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep order'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Cancel order'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    if (!order.isLive) {
+      PreviewOrders.instance.cancel(order);
+      return;
+    }
+    setState(() => _cancelling = true);
+    try {
+      await LiveOrders.instance.cancel(order);
+    } on StudentApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } finally {
+      if (mounted) setState(() => _cancelling = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: PreviewOrders.instance,
+    listenable: order.isLive ? LiveOrders.instance : PreviewOrders.instance,
     builder: (context, _) => OrderPageShell(
       title: 'Order details',
       onNavigate: onNavigate,
@@ -334,10 +397,16 @@ class OrderDetailsScreen extends StatelessWidget {
             style: const TextStyle(color: HomeStyle.muted, fontSize: 11),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Preview · Sample order only',
-            style: TextStyle(color: HomeStyle.muted, fontSize: 10),
-          ),
+          if (!order.isLive)
+            const Text(
+              'Preview · Sample order only',
+              style: TextStyle(color: HomeStyle.muted, fontSize: 10),
+            )
+          else if (order.pickupTime != null && !order.closed)
+            Text(
+              'Ready around ${TimeOfDay.fromDateTime(order.pickupTime!).format(context)}',
+              style: const TextStyle(color: HomeStyle.orange, fontSize: 12),
+            ),
           const SizedBox(height: 20),
           if (order.closed)
             orderPanel(
@@ -400,7 +469,8 @@ class OrderDetailsScreen extends StatelessWidget {
                     style: TextStyle(color: HomeStyle.muted, fontSize: 11),
                   ),
                   const SizedBox(height: 18),
-                  for (var i = 0; i < 4; i++)
+                  // The backend only tracks pending and accepted so far.
+                  for (var i = 0; i < (order.isLive ? 2 : 4); i++)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 20),
                       child: Row(
@@ -511,34 +581,19 @@ class OrderDetailsScreen extends StatelessWidget {
                     : 'Browse Menu',
               ),
             ),
-          if (!order.closed && order.status != OrderStatus.ready)
+          if (!order.isLive &&
+              !order.closed &&
+              order.status != OrderStatus.ready)
             OutlinedButton(
               onPressed: () => PreviewOrders.instance.advance(order),
               child: const Text('Preview next status'),
             ),
           if (order.status == OrderStatus.pending)
             TextButton(
-              onPressed: () async {
-                final confirm = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Cancel preview order?'),
-                    content: const Text('This only updates the local preview.'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text('Keep order'),
-                      ),
-                      FilledButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        child: const Text('Cancel order'),
-                      ),
-                    ],
-                  ),
-                );
-                if (confirm == true) PreviewOrders.instance.cancel(order);
-              },
-              child: const Text('Cancel preview order'),
+              onPressed: _cancelling ? null : _cancel,
+              child: Text(
+                order.isLive ? 'Cancel order' : 'Cancel preview order',
+              ),
             ),
           TextButton(
             onPressed: () => _go(context, 2),

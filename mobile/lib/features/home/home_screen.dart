@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../auth/auth_service.dart';
 import '../auth/profile_screen.dart';
 import '../auth/student_profile_view.dart';
+import '../ordering/student_api.dart';
 import '../ordering/student_orders_screen.dart';
 import 'home_style.dart';
 import '../ordering/shop_menu_screen.dart';
@@ -26,6 +27,30 @@ class _HomeScreenState extends State<HomeScreen> {
   final Map<String, Tray> _trays = {};
   String _selected = 'All';
   int _navIndex = 0;
+  List<Shop> _liveShops = [];
+  bool _loadingShops = false;
+  String? _shopsError;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.isPreview) _loadShops();
+  }
+
+  Future<void> _loadShops() async {
+    setState(() {
+      _loadingShops = true;
+      _shopsError = null;
+    });
+    try {
+      final shops = await StudentApi.shops();
+      if (mounted) setState(() => _liveShops = shops);
+    } on StudentApiException catch (e) {
+      if (mounted) setState(() => _shopsError = e.message);
+    } finally {
+      if (mounted) setState(() => _loadingShops = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -64,7 +89,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _viewShop(Shop shop) {
-    final tray = _trays.putIfAbsent(shop.id, () => Tray(shop));
+    final tray = _trays.putIfAbsent(
+      shop.id,
+      () => Tray(shop, live: !widget.isPreview),
+    );
     Navigator.push(
       context,
       MaterialPageRoute<void>(
@@ -128,15 +156,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _shops() {
     final query = _search.text.trim().toLowerCase();
-    final shops = mockShops
+    final shops = (widget.isPreview ? mockShops : _liveShops)
         .where(
           (shop) =>
               (_selected == 'All' || shop.category == _selected) &&
               '${shop.name} ${shop.category}'.toLowerCase().contains(query),
         )
         .toList();
-    return ListView(
+    final list = ListView(
       key: const PageStorageKey('shop-list'),
+      physics: const AlwaysScrollableScrollPhysics(),
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
@@ -213,7 +242,22 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-        if (shops.isEmpty)
+        if (_shopsError != null)
+          Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              children: [
+                Text(_shopsError!, textAlign: TextAlign.center),
+                TextButton(onPressed: _loadShops, child: const Text('Retry')),
+              ],
+            ),
+          )
+        else if (_loadingShops && _liveShops.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(32),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (shops.isEmpty)
           const Padding(
             padding: EdgeInsets.all(32),
             child: Column(
@@ -235,6 +279,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
       ],
     );
+    return widget.isPreview
+        ? list
+        : RefreshIndicator(onRefresh: _loadShops, child: list);
   }
 
   @override
@@ -269,7 +316,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         : ProfileScreen(
                             onOrders: () => setState(() => _navIndex = 2),
                           ),
-                  2 => StudentOrdersScreen(onNavigate: _navigate),
+                  2 => StudentOrdersScreen(
+                    onNavigate: _navigate,
+                    isPreview: widget.isPreview,
+                  ),
                   _ => _shops(),
                 },
               ),

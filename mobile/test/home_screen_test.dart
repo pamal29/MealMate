@@ -20,7 +20,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
+    await tester.pumpWidget(const MaterialApp(home: HomeScreen(isPreview: true)));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Shan');
     await tester.pumpAndSettle();
@@ -66,7 +66,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
-      const MaterialApp(debugShowCheckedModeBanner: false, home: HomeScreen()),
+      const MaterialApp(debugShowCheckedModeBanner: false, home: HomeScreen(isPreview: true)),
     );
     await tester.pumpAndSettle();
     expect(find.byType(ShopCard), findsNWidgets(3));
@@ -120,7 +120,7 @@ void main() {
         key: boundaryKey,
         child: const MaterialApp(
           debugShowCheckedModeBanner: false,
-          home: HomeScreen(),
+          home: HomeScreen(isPreview: true),
         ),
       ),
     );
@@ -152,7 +152,7 @@ void main() {
       MaterialApp(
         home: MediaQuery(
           data: const MediaQueryData(textScaler: TextScaler.linear(1.4)),
-          child: const HomeScreen(),
+          child: const HomeScreen(isPreview: true),
         ),
       ),
     );
