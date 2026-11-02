@@ -154,6 +154,25 @@ void main() {
     expect(find.byKey(const ValueKey('unread-dot')), findsNothing);
   });
 
+  testWidgets('rejected orders show the cancelled icon', (tester) async {
+    final api = _FakeNotificationsApi(
+      items: [
+        {
+          'id': _cancelledId,
+          'type': 'order_rejected',
+          'title': 'Order rejected',
+          'body': 'Sorry, the shop could not accept your order.',
+          'is_read': false,
+          'created_at': DateTime.now().toUtc().toIso8601String(),
+        },
+      ],
+    );
+    await _pumpScreen(tester, api);
+
+    expect(find.byIcon(Icons.cancel_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.notifications_none), findsNothing);
+  });
+
   testWidgets('shows an empty state', (tester) async {
     await _pumpScreen(tester, _FakeNotificationsApi(items: []));
     expect(find.textContaining('No notifications yet.'), findsOneWidget);
