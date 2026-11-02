@@ -1,113 +1,112 @@
 import 'package:flutter/material.dart';
-import '../../../core/colors.dart';
+
+import '../home_style.dart';
 import '../models/shop.dart';
 
 class ShopCard extends StatelessWidget {
   final Shop shop;
   final VoidCallback? onTap;
-
   const ShopCard({super.key, required this.shop, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: shop.isOpen ? 1 : 0.55,
-      child: Card(
-        color: AppColors.surface,
-        elevation: 0,
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.border),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: shop.isOpen ? onTap : null,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
+    final largeText = MediaQuery.textScalerOf(context).scale(16) > 20;
+    return Container(
+      height: largeText ? 212 : 170,
+      margin: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+      padding: const EdgeInsets.fromLTRB(20, 12, 16, 12),
+      decoration: BoxDecoration(
+        color: HomeStyle.surface,
+        border: Border.all(color: HomeStyle.border),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Image.asset(
+              shop.imageAsset,
+              width: MediaQuery.sizeOf(context).width < 350 ? 90 : 112,
+              height: double.infinity,
+              fit: BoxFit.cover,
+              semanticLabel: '${shop.name} restaurant',
+              errorBuilder: (_, _, _) => const SizedBox(
+                width: 112,
+                child: Icon(Icons.restaurant, color: HomeStyle.muted),
+              ),
+            ),
+          ),
+          const SizedBox(width: 36),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryLight,
-                    borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 14),
+                Text(
+                  shop.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    height: 1.3,
                   ),
-                  child: const Icon(Icons.restaurant,
-                      color: AppColors.primary, size: 32),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              shop.name,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                          ),
-                          _StatusBadge(isOpen: shop.isOpen),
-                        ],
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: shop.isOpen ? HomeStyle.green : HomeStyle.muted,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${shop.category} · ${shop.location}',
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '${shop.isOpen ? 'Open' : 'Closed'} • ${shop.preparationTime}',
                         style: const TextStyle(
-                            fontSize: 13, color: AppColors.textSecondary),
+                          fontSize: 11,
+                          color: HomeStyle.muted,
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.star_rounded,
-                              size: 16, color: AppColors.accent),
-                          const SizedBox(width: 2),
-                          Text('${shop.rating}',
-                              style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.textPrimary)),
-                          const SizedBox(width: 12),
-                          const Icon(Icons.schedule,
-                              size: 15, color: AppColors.textSecondary),
-                        ],
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: HomeStyle.orange.withValues(alpha: .18),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
                       ),
                     ],
+                  ),
+                  child: FilledButton(
+                    onPressed: onTap,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('View', style: TextStyle(fontSize: 14)),
+                        SizedBox(width: 6),
+                        Icon(Icons.arrow_forward, size: 18),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  final bool isOpen;
-  const _StatusBadge({required this.isOpen});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isOpen ? AppColors.success : AppColors.error;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        isOpen ? 'Open' : 'Closed',
-        style: TextStyle(
-            fontSize: 11, fontWeight: FontWeight.w600, color: color),
+        ],
       ),
     );
   }
