@@ -40,12 +40,22 @@ Future<void> showFoodItem(
                 ),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(14),
-                  child: Image.asset(
-                    item.image,
-                    height: 190,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
+                  child: item.image == null
+                      ? const SizedBox(
+                          height: 120,
+                          width: double.infinity,
+                          child: Icon(
+                            Icons.restaurant_outlined,
+                            size: 48,
+                            color: HomeStyle.muted,
+                          ),
+                        )
+                      : Image.asset(
+                          item.image!,
+                          height: 190,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
                 ),
                 const SizedBox(height: 18),
                 Text(
@@ -60,7 +70,7 @@ Future<void> showFoodItem(
                   children: [
                     Expanded(
                       child: Text(
-                        'LKR ${item.price}',
+                        'LKR ${money(item.price)}',
                         style: const TextStyle(
                           color: HomeStyle.orange,
                           fontSize: 20,
@@ -123,7 +133,7 @@ Future<void> showFoodItem(
                           children: [
                             const Text('Add to Order'),
                             Text(
-                              'LKR ${quantity * item.price}',
+                              'LKR ${money(quantity * item.price)}',
                               style: const TextStyle(fontSize: 11),
                             ),
                           ],

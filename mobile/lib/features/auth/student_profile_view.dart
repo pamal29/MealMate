@@ -210,8 +210,9 @@ class _StudentProfileViewState extends State<StudentProfileView> {
           Icons.receipt_long_outlined,
           'My Orders',
           widget.onOrders,
-          trailing:
-              '${PreviewOrders.instance.orders.where((o) => !o.closed).length} sample',
+          trailing: widget.isPreview
+              ? '${PreviewOrders.instance.orders.where((o) => !o.closed).length} sample'
+              : null,
         ),
         _row(
           Icons.notifications_none,

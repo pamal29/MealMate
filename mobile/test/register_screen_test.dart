@@ -20,13 +20,21 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: RegisterScreen(
-          onRegister: (name, email, password, {String role = 'student'}) async {
-            calls++;
-            expect(name, 'Student');
-            expect(email, 'student@example.com');
-            expect(password, 'secret123');
-            expect(role, 'student');
-          },
+          onRegister:
+              (
+                name,
+                email,
+                password, {
+                String? phone,
+                String role = 'student',
+              }) async {
+                calls++;
+                expect(phone, isNull);
+                expect(name, 'Student');
+                expect(email, 'student@example.com');
+                expect(password, 'secret123');
+                expect(role, 'student');
+              },
         ),
       ),
     );

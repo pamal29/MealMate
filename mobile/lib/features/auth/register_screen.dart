@@ -15,7 +15,8 @@ class RegisterScreen extends StatefulWidget {
     String password, {
     String role,
     String? phone,
-  }) onRegister;
+  })
+  onRegister;
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
@@ -42,63 +43,58 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  
-Future<void> _submit() async {
-  if (_loading || !_form.currentState!.validate()) return;
+  Future<void> _submit() async {
+    if (_loading || !_form.currentState!.validate()) return;
 
-  if (!_agreed) {
+    if (!_agreed) {
+      setState(() {
+        _error = 'Please accept the terms before continuing.';
+      });
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+
     setState(() {
-      _error = 'Please accept the terms before continuing.';
+      _loading = true;
+      _error = null;
     });
-    return;
-  }
 
-  FocusScope.of(context).unfocus();
+    try {
+      await widget.onRegister(
+        _name.text.trim(),
+        _email.text.trim(),
+        _password.text,
+        role: _role,
+        phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
+      );
 
-  setState(() {
-    _loading = true;
-    _error = null;
-  });
+      if (!mounted) return;
 
-  try {
-    await AuthService.register(
-      _name.text.trim(),
-      _email.text.trim(),
-      _password.text,
-      role: _role,
-      phone: _phone.text.trim().isNotEmpty 
-        ? null
-        : _phone.text.trim(),
-    );
+      final role = AuthService.user?['role'];
 
-
-    if (!mounted) return;
-
-    final role = AuthService.user?['role'];
-
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(
-        builder: (_) => role == 'shop_owner'
-            ? const OwnerDashboardScreen()
-            : const HomeScreen(),
-      ),
-      (_) => false,
-    );
-  } on AuthException catch (e) {
-    if (!mounted) return;
-    setState(() => _error = e.message);
-  } catch (_) {
-    if (!mounted) return;
-    setState(() {
-      _error = 'Could not connect. Please try again.';
-    });
-  } finally {
-    if (mounted) {
-      setState(() => _loading = false);
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(
+          builder: (_) => role == 'shop_owner'
+              ? const OwnerDashboardScreen()
+              : const HomeScreen(),
+        ),
+        (_) => false,
+      );
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Could not connect. Please try again.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
-}
-
 
   @override
   Widget build(BuildContext context) => Theme(
