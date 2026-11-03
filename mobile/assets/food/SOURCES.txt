@@ -1,0 +1,5 @@
+Sample food imagery (not photos of the actual menu items):
+rice.jpg: https://images.unsplash.com/photo-1603133872878-684f208fb84b
+samosa.jpg: https://images.unsplash.com/photo-1601050690597-df0568f70950
+kothu.jpg: https://images.unsplash.com/photo-1547592180-85f173990554
+Replace with the original approved food images before publishing.
