@@ -1,18 +1,35 @@
 import 'package:flutter/material.dart';
 
 import '../home/home_style.dart';
+import 'live_orders.dart';
 import 'preview_orders.dart';
 import 'order_pages.dart';
+import 'tray.dart' show money;
 
 class StudentOrdersScreen extends StatefulWidget {
-  const StudentOrdersScreen({super.key, this.onNavigate});
+  const StudentOrdersScreen({
+    super.key,
+    this.onNavigate,
+    this.isPreview = true,
+  });
   final ValueChanged<int>? onNavigate;
+
+  /// Sample orders unless the home screen passes false for a signed-in
+  /// student, in which case orders are loaded from the API.
+  final bool isPreview;
   @override
   State<StudentOrdersScreen> createState() => _StudentOrdersScreenState();
 }
 
 class _StudentOrdersScreenState extends State<StudentOrdersScreen> {
   bool _previous = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.isPreview) LiveOrders.instance.load();
+  }
+
   Widget _card(PreviewOrder order) => Card(
     margin: const EdgeInsets.only(bottom: 14),
     color: HomeStyle.surface,
@@ -99,7 +116,7 @@ class _StudentOrdersScreenState extends State<StudentOrdersScreen> {
                   ),
                 ),
                 Text(
-                  'LKR ${order.total}',
+                  'LKR ${money(order.total)}',
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ],
@@ -111,15 +128,16 @@ class _StudentOrdersScreenState extends State<StudentOrdersScreen> {
   );
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: PreviewOrders.instance,
+    listenable: widget.isPreview ? PreviewOrders.instance : LiveOrders.instance,
     builder: (context, _) {
-      final active = PreviewOrders.instance.orders
-          .where((o) => !o.closed)
-          .toList();
-      final previous = PreviewOrders.instance.orders
-          .where((o) => o.closed)
-          .toList();
-      return ListView(
+      final live = LiveOrders.instance;
+      final orders = widget.isPreview
+          ? PreviewOrders.instance.orders
+          : live.orders;
+      final active = orders.where((o) => !o.closed).toList();
+      final previous = orders.where((o) => o.closed).toList();
+      final list = ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(24),
         children: [
           SegmentedButton<bool>(
@@ -146,31 +164,51 @@ class _StudentOrdersScreenState extends State<StudentOrdersScreen> {
             onSelectionChanged: (v) => setState(() => _previous = v.first),
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Preview · Sample orders',
-            style: TextStyle(color: HomeStyle.muted, fontSize: 10),
-          ),
+          if (widget.isPreview)
+            const Text(
+              'Preview · Sample orders',
+              style: TextStyle(color: HomeStyle.muted, fontSize: 10),
+            )
+          else if (live.error != null)
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    live.error!,
+                    style: const TextStyle(
+                      color: HomeStyle.orange,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+                TextButton(onPressed: live.load, child: const Text('Retry')),
+              ],
+            )
+          else if (live.loading && orders.isEmpty)
+            const LinearProgressIndicator(minHeight: 2),
           const SizedBox(height: 16),
           if (_previous) ...[
             for (final order in previous) _card(order),
           ] else ...[
             if (active.isEmpty) const Text('No active orders.'),
             for (final order in active) _card(order),
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'PREVIOUS · MOST RECENT',
-                    style: TextStyle(fontSize: 11, color: HomeStyle.muted),
+            if (previous.isNotEmpty) ...[
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'PREVIOUS · MOST RECENT',
+                      style: TextStyle(fontSize: 11, color: HomeStyle.muted),
+                    ),
                   ),
-                ),
-                TextButton(
-                  onPressed: () => setState(() => _previous = true),
-                  child: const Text('View all'),
-                ),
-              ],
-            ),
-            if (previous.isNotEmpty) _card(previous.first),
+                  TextButton(
+                    onPressed: () => setState(() => _previous = true),
+                    child: const Text('View all'),
+                  ),
+                ],
+              ),
+              _card(previous.first),
+            ],
           ],
           const SizedBox(height: 12),
           const Text(
@@ -180,6 +218,9 @@ class _StudentOrdersScreenState extends State<StudentOrdersScreen> {
           ),
         ],
       );
+      return widget.isPreview
+          ? list
+          : RefreshIndicator(onRefresh: live.load, child: list);
     },
   );
 }

@@ -49,6 +49,7 @@ void main() {
         'email': 'owner@example.com',
         'password': 'secret123',
         'role': 'shop_owner',
+        'phone': null,
       });
       return http.Response(
         jsonEncode({

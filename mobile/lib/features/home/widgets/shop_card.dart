@@ -24,17 +24,22 @@ class ShopCard extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
-            child: Image.asset(
-              shop.imageAsset,
-              width: MediaQuery.sizeOf(context).width < 350 ? 90 : 112,
-              height: double.infinity,
-              fit: BoxFit.cover,
-              semanticLabel: '${shop.name} restaurant',
-              errorBuilder: (_, _, _) => const SizedBox(
-                width: 112,
-                child: Icon(Icons.restaurant, color: HomeStyle.muted),
-              ),
-            ),
+            child: shop.imageAsset.isEmpty
+                ? const SizedBox(
+                    width: 112,
+                    child: Icon(Icons.storefront, color: HomeStyle.muted),
+                  )
+                : Image.asset(
+                    shop.imageAsset,
+                    width: MediaQuery.sizeOf(context).width < 350 ? 90 : 112,
+                    height: double.infinity,
+                    fit: BoxFit.cover,
+                    semanticLabel: '${shop.name} restaurant',
+                    errorBuilder: (_, _, _) => const SizedBox(
+                      width: 112,
+                      child: Icon(Icons.restaurant, color: HomeStyle.muted),
+                    ),
+                  ),
           ),
           const SizedBox(width: 36),
           Expanded(

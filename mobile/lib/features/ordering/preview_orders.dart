@@ -14,8 +14,9 @@ class OrderLine {
   });
   final String name, description;
   final String? image;
-  final int quantity, price;
-  int get total => quantity * price;
+  final int quantity;
+  final num price;
+  num get total => quantity * price;
 }
 
 class PreviewOrder {
@@ -26,16 +27,25 @@ class PreviewOrder {
     required this.status,
     required this.createdAt,
     this.packaging = 40,
+    this.serverId,
+    this.pickupTime,
+    this.serverTotal,
   });
   final String id, shop;
+
+  /// The order's id on the server; null for preview orders.
+  final String? serverId;
+  final DateTime? pickupTime;
+  final num? serverTotal;
+  bool get isLive => serverId != null;
   final List<OrderLine> lines;
   final DateTime createdAt;
   final int packaging;
   OrderStatus status;
   bool get closed =>
       status == OrderStatus.rejected || status == OrderStatus.cancelled;
-  int get subtotal => lines.fold(0, (sum, line) => sum + line.total);
-  int get total => subtotal + packaging;
+  num get subtotal => lines.fold<num>(0, (sum, line) => sum + line.total);
+  num get total => serverTotal ?? subtotal + packaging;
   String get label => status.name[0].toUpperCase() + status.name.substring(1);
   String get dateLabel =>
       '${createdAt.day.toString().padLeft(2, '0')}/${createdAt.month.toString().padLeft(2, '0')}/${createdAt.year} · ${createdAt.hour.toString().padLeft(2, '0')}:${createdAt.minute.toString().padLeft(2, '0')}';

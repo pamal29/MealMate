@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../auth/auth_service.dart';
 import '../home/home_style.dart';
 import 'ordering_widgets.dart';
+import 'live_orders.dart';
 import 'tray.dart';
 import 'preview_orders.dart';
 import 'order_pages.dart' show OrderSuccessScreen;
@@ -117,26 +118,27 @@ class CheckoutScreen extends StatelessWidget {
                             ],
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: HomeStyle.orange.withValues(alpha: .1),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: HomeStyle.orange.withValues(alpha: .25),
+                        if (!tray.live)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: HomeStyle.orange.withValues(alpha: .1),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: HomeStyle.orange.withValues(alpha: .25),
+                              ),
+                            ),
+                            child: const Text(
+                              '15–20m',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: HomeStyle.orange,
+                              ),
                             ),
                           ),
-                          child: const Text(
-                            '15–20m',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: HomeStyle.orange,
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -160,7 +162,8 @@ class CheckoutScreen extends StatelessWidget {
                         const SizedBox(height: 16),
                         _amount('Subtotal', tray.subtotal),
                         const SizedBox(height: 10),
-                        _amount('Campus Packaging', tray.packaging),
+                        if (!tray.live)
+                          _amount('Campus Packaging', tray.packaging),
                         const Divider(height: 24, color: HomeStyle.border),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -175,7 +178,7 @@ class CheckoutScreen extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              'LKR ${tray.total}',
+                              'LKR ${money(tray.total)}',
                               style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w700,
@@ -197,38 +200,7 @@ class CheckoutScreen extends StatelessWidget {
             top: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-              child: FilledButton(
-                onPressed: tray.count == 0
-                    ? null
-                    : () {
-                        final order = PreviewOrders.instance.place(tray);
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute<void>(
-                            builder: (_) => OrderSuccessScreen(
-                              order: order,
-                              onNavigate: onNavigate,
-                            ),
-                          ),
-                        );
-                      },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          'Place preview order (LKR ${tray.total})',
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.arrow_forward, size: 18),
-                    ],
-                  ),
-                ),
-              ),
+              child: _PlaceOrderButton(tray: tray, onNavigate: onNavigate),
             ),
           ),
         ),
@@ -244,7 +216,7 @@ class CheckoutScreen extends StatelessWidget {
       .take(2)
       .map((s) => s[0].toUpperCase())
       .join();
-  Widget _amount(String label, int amount) => Row(
+  Widget _amount(String label, num amount) => Row(
     mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
       Expanded(
@@ -253,7 +225,7 @@ class CheckoutScreen extends StatelessWidget {
           style: const TextStyle(fontSize: 14, color: HomeStyle.muted),
         ),
       ),
-      Text('LKR $amount', style: const TextStyle(fontSize: 14)),
+      Text('LKR ${money(amount)}', style: const TextStyle(fontSize: 14)),
     ],
   );
   Widget _item(BuildContext context, FoodItem item) => Container(
@@ -306,7 +278,9 @@ class CheckoutScreen extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                item.id == 'samosa'
+                tray.live
+                    ? 'LKR ${money(item.price)} each'
+                    : item.id == 'samosa'
                     ? '2 pcs portion · LKR ${item.price} each'
                     : 'SUSL Special · LKR ${item.price} each',
                 style: const TextStyle(fontSize: 11, color: HomeStyle.muted),
@@ -319,7 +293,7 @@ class CheckoutScreen extends StatelessWidget {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(
-                    'LKR ${item.price * tray.quantity(item)}',
+                    'LKR ${money(item.price * tray.quantity(item))}',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -334,5 +308,86 @@ class CheckoutScreen extends StatelessWidget {
         ),
       ],
     ),
+  );
+}
+
+class _PlaceOrderButton extends StatefulWidget {
+  const _PlaceOrderButton({required this.tray, this.onNavigate});
+  final Tray tray;
+  final ValueChanged<int>? onNavigate;
+  @override
+  State<_PlaceOrderButton> createState() => _PlaceOrderButtonState();
+}
+
+class _PlaceOrderButtonState extends State<_PlaceOrderButton> {
+  bool _placing = false;
+  String? _error;
+
+  Future<void> _place() async {
+    final tray = widget.tray;
+    setState(() {
+      _placing = true;
+      _error = null;
+    });
+    try {
+      final order = tray.live
+          ? await LiveOrders.instance.place(tray)
+          : PreviewOrders.instance.place(tray);
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) =>
+              OrderSuccessScreen(order: order, onNavigate: widget.onNavigate),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _placing = false;
+          _error = '$e';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      if (_error != null)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(
+            _error!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+          ),
+        ),
+      FilledButton(
+        onPressed: widget.tray.count == 0 || _placing ? null : _place,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: Text(
+                  _placing
+                      ? 'Placing order...'
+                      : widget.tray.live
+                      ? 'Place order (LKR ${money(widget.tray.total)})'
+                      : 'Place preview order (LKR ${widget.tray.total})',
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.arrow_forward, size: 18),
+            ],
+          ),
+        ),
+      ),
+    ],
   );
 }

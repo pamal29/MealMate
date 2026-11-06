@@ -88,7 +88,7 @@ void main() {
       await tester.runAsync(() async {
         for (final path in [
           tray.shop.imageAsset,
-          ...sampleMenu.map((item) => item.image),
+          ...sampleMenu.map((item) => item.image!),
         ]) {
           await precacheImage(
             AssetImage(path),

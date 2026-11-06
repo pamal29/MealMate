@@ -123,6 +123,7 @@ class AuthService {
     String email,
     String password, {
     String role = 'student',
+    String? phone,
     http.Client? client,
   }) async {
     logout();
@@ -134,6 +135,9 @@ class AuthService {
           'email': email.trim().toLowerCase(),
           'password': password,
           'role': role,
+          'phone': phone?.trim().isEmpty == true
+            ? null
+            : phone?.trim(),
         },
         client: client,
       ),

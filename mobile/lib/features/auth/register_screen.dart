@@ -9,7 +9,14 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key, this.onRegister = AuthService.register});
-  final Future<void> Function(String, String, String, {String role}) onRegister;
+  final Future<void> Function(
+    String name,
+    String email,
+    String password, {
+    String role,
+    String? phone,
+  })
+  onRegister;
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
@@ -38,42 +45,54 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _submit() async {
     if (_loading || !_form.currentState!.validate()) return;
+
     if (!_agreed) {
-      setState(() => _error = 'Please accept the terms before continuing.');
+      setState(() {
+        _error = 'Please accept the terms before continuing.';
+      });
       return;
     }
+
     FocusScope.of(context).unfocus();
+
     setState(() {
       _loading = true;
       _error = null;
     });
+
     try {
       await widget.onRegister(
         _name.text.trim(),
         _email.text.trim(),
         _password.text,
         role: _role,
+        phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
       );
-      if (AuthService.user != null && _phone.text.trim().isNotEmpty) {
-        AuthService.user!['phone'] = _phone.text.trim();
-      }
+
       if (!mounted) return;
+
+      final role = AuthService.user?['role'];
+
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute<void>(
-          builder: (_) => AuthService.user?['role'] == 'shop_owner'
+          builder: (_) => role == 'shop_owner'
               ? const OwnerDashboardScreen()
               : const HomeScreen(),
         ),
         (_) => false,
       );
-    } on AuthException catch (error) {
-      if (mounted) setState(() => _error = error.message);
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.message);
     } catch (_) {
-      if (mounted) {
-        setState(() => _error = 'Could not connect. Please try again.');
-      }
+      if (!mounted) return;
+      setState(() {
+        _error = 'Could not connect. Please try again.';
+      });
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 

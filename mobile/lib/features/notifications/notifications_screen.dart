@@ -159,6 +159,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget _tile(AppNotification item) {
     final (icon, color) = switch (item.type) {
       'order_accepted' => (Icons.check_circle_outline, HomeStyle.green),
+      'order_rejected' ||
       'order_cancelled' => (Icons.cancel_outlined, HomeStyle.orange),
       _ => (Icons.notifications_none, HomeStyle.muted),
     };

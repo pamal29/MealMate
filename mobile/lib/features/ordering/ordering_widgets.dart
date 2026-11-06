@@ -11,18 +11,27 @@ class FoodPhoto extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ClipRRect(
     borderRadius: BorderRadius.circular(12),
-    child: Image.asset(
-      item.image,
-      width: size,
-      height: size,
-      fit: BoxFit.cover,
-      semanticLabel: item.name,
-      errorBuilder: (_, _, _) => SizedBox(
-        width: size,
-        height: size,
-        child: const Icon(Icons.restaurant),
-      ),
-    ),
+    child: item.image == null
+        ? SizedBox(
+            width: size,
+            height: size,
+            child: const Icon(
+              Icons.restaurant_outlined,
+              color: HomeStyle.muted,
+            ),
+          )
+        : Image.asset(
+            item.image!,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            semanticLabel: item.name,
+            errorBuilder: (_, _, _) => SizedBox(
+              width: size,
+              height: size,
+              child: const Icon(Icons.restaurant),
+            ),
+          ),
   );
 }
 
