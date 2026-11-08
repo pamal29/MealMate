@@ -36,10 +36,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('View Tray'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Place preview order (LKR 520)'));
+      await tester.tap(find.text('Place preview order (LKR 480)'));
       await tester.pumpAndSettle();
       expect(find.byType(OrderSuccessScreen), findsOneWidget);
-      expect(PreviewOrders.instance.orders.first.total, 520);
+      expect(PreviewOrders.instance.orders.first.total, 480);
       await tester.ensureVisible(find.text('Track My Order'));
       await tester.tap(find.text('Track My Order'));
       await tester.pumpAndSettle();

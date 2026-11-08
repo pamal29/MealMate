@@ -15,17 +15,17 @@ import 'package:mealmate/features/ordering/preview_orders.dart';
 
 void main() {
   setUp(() => PreviewOrders.instance.reset());
-  test('Tray computes totals, removes items, caps quantities, and clears packaging', () {
+  test('Tray computes totals, removes items, caps quantities, without an unsupported packaging fee', () {
     final tray = Tray(mockShops[1]);
     tray.change(sampleMenu[0], 1);
     tray.change(sampleMenu[1], 2);
     expect(tray.count, 3);
     expect(tray.subtotal, 780);
-    expect(tray.total, 820);
+    expect(tray.total, 780);
     tray.change(sampleMenu[1], -1);
-    expect(tray.total, 670);
+    expect(tray.total, 630);
     tray.remove(sampleMenu[0]);
-    expect(tray.total, 190);
+    expect(tray.total, 150);
     tray.change(sampleMenu[1], 30);
     expect(tray.quantity(sampleMenu[1]), 20);
     tray.clear();
@@ -46,19 +46,19 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Add Vegetable Samosa (2 pcs)'));
       await tester.pumpAndSettle();
-      expect(tray.total, 190);
+      expect(tray.total, 150);
       await tester.tap(find.text('View Tray'));
       await tester.pumpAndSettle();
       expect(find.byType(CheckoutScreen), findsOneWidget);
       await tester.tap(find.byTooltip('Increase Vegetable Samosa (2 pcs)'));
       await tester.pumpAndSettle();
-      expect(tray.total, 340);
-      await tester.tap(find.text('Place preview order (LKR 340)'));
+      expect(tray.total, 300);
+      await tester.tap(find.text('Place preview order (LKR 300)'));
       await tester.pumpAndSettle();
       expect(find.byType(OrderSuccessScreen), findsOneWidget);
       expect(find.textContaining('no order was sent'), findsOneWidget);
       expect(tray.count, 0);
-      expect(PreviewOrders.instance.orders.first.total, 340);
+      expect(PreviewOrders.instance.orders.first.total, 300);
       expect(tester.takeException(), isNull);
     },
   );

@@ -52,7 +52,8 @@ class Tray extends ChangeNotifier {
   int get count => _quantities.values.fold(0, (sum, value) => sum + value);
   int get subtotal =>
       items.fold(0, (sum, item) => sum + item.price * quantity(item));
-  int get packaging => count == 0 ? 0 : 40;
+  // The API currently charges item totals only.
+  int get packaging => 0;
   int get total => subtotal + packaging;
   void change(FoodItem item, int delta) {
     final next = (quantity(item) + delta).clamp(0, 20);

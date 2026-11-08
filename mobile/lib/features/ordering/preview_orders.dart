@@ -25,7 +25,7 @@ class PreviewOrder {
     required this.lines,
     required this.status,
     required this.createdAt,
-    this.packaging = 40,
+    this.packaging = 0,
   });
   final String id, shop;
   final List<OrderLine> lines;
