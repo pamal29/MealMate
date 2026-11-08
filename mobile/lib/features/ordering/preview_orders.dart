@@ -110,6 +110,7 @@ class PreviewOrders extends ChangeNotifier {
   }
 
   PreviewOrder place(Tray tray) {
+    if (!tray.shop.isOpen) throw StateError('Shop is closed.');
     if (tray.count == 0) throw StateError('Cannot place an empty tray.');
     final order = PreviewOrder(
       id: 'MM-${_next++}',

@@ -56,6 +56,7 @@ class Tray extends ChangeNotifier {
   int get packaging => 0;
   int get total => subtotal + packaging;
   void change(FoodItem item, int delta) {
+    if (!shop.isOpen && delta > 0) return;
     final next = (quantity(item) + delta).clamp(0, 20);
     if (next == 0) {
       _quantities.remove(item.id);

@@ -82,21 +82,25 @@ class _ShopMenuScreenState extends State<ShopMenuScreen> {
                       Container(
                         width: 5,
                         height: 5,
-                        decoration: const BoxDecoration(
-                          color: HomeStyle.green,
+                        decoration: BoxDecoration(
+                          color: widget.tray.shop.isOpen
+                              ? HomeStyle.green
+                              : HomeStyle.muted,
                           shape: BoxShape.circle,
                         ),
                       ),
                       const SizedBox(width: 4),
-                      const Text(
-                        'Open Now',
+                      Text(
+                        widget.tray.shop.isOpen ? 'Open Now' : 'Closed',
                         style: TextStyle(fontSize: 10, color: HomeStyle.muted),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Open till 7:00 PM',
+                  Text(
+                    widget.tray.shop.isOpen
+                        ? 'Accepting orders'
+                        : 'Not accepting orders right now',
                     style: TextStyle(fontSize: 12, color: HomeStyle.muted),
                   ),
                   const SizedBox(height: 16),
@@ -217,7 +221,9 @@ class _ShopMenuScreenState extends State<ShopMenuScreen> {
     ),
   );
   Widget _food(FoodItem item) => GestureDetector(
-    onTap: () => showFoodItem(context, widget.tray, item),
+    onTap: widget.tray.shop.isOpen
+        ? () => showFoodItem(context, widget.tray, item)
+        : null,
     child: Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       padding: const EdgeInsets.all(16),
@@ -270,7 +276,9 @@ class _ShopMenuScreenState extends State<ShopMenuScreen> {
                             foregroundColor: Colors.white,
                             padding: EdgeInsets.zero,
                           ),
-                          onPressed: () => widget.tray.change(item, 1),
+                          onPressed: widget.tray.shop.isOpen
+                              ? () => widget.tray.change(item, 1)
+                              : null,
                           icon: const Icon(Icons.add, size: 20),
                         ),
                       ),

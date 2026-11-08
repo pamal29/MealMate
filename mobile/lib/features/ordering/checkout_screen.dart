@@ -198,7 +198,7 @@ class CheckoutScreen extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
               child: FilledButton(
-                onPressed: tray.count == 0
+                onPressed: tray.count == 0 || !tray.shop.isOpen
                     ? null
                     : () {
                         final order = PreviewOrders.instance.place(tray);
@@ -219,7 +219,9 @@ class CheckoutScreen extends StatelessWidget {
                     children: [
                       Flexible(
                         child: Text(
-                          'Place preview order (LKR ${tray.total})',
+                          tray.shop.isOpen
+                              ? 'Place preview order (LKR ${tray.total})'
+                              : 'Shop is closed',
                           style: const TextStyle(fontSize: 14),
                         ),
                       ),
