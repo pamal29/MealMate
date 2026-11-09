@@ -65,7 +65,7 @@ router.get('/mine', async (req, res) => {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 //edit menu item
-router.put('./:id', async (req, res) => {
+router.put('/:id', async (req, res) => {
   const {id} = req.params;
   const {name, description, price, is_available} = req.body;
 
@@ -88,12 +88,12 @@ router.put('./:id', async (req, res) => {
   try {
     const result = await db.query(
       ` update menu_items 
-        set name = $1, 
-            description = $2, 
-            price = $3, 
-            is_available = $4 
-        where id = $5 
-          and shop_id(select id from shops where owner_id = $6)
+        set name = coalesce($1, name),
+            description = coalesce($2, description),
+            price = coalesce($3, price),
+            is_available = coalesce($4, is_available)
+        where id = $5
+          and shop_id = (select id from shops where owner_id = $6)
         returning *`,
       [
         name ? name.trim() : null,
@@ -115,7 +115,7 @@ router.put('./:id', async (req, res) => {
   }
 });
 
-router.delete('./:id', async (req, res) => {
+router.delete('/:id', async (req, res) => {
   const {id} = req.params;
 
   if (!UUID_RE.test(id)) {
