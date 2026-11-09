@@ -4,9 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'profile_service.dart';
 
 class EditProfileScreen extends StatefulWidget {
-  const EditProfileScreen({super.key, required this.user, required this.token});
+  const EditProfileScreen({super.key, required this.user});
   final Map<String, dynamic> user;
-  final String token;
 
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();
@@ -42,7 +41,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _saving = true);
     try {
       final updated = await ProfileService.update(
-        token: widget.token,
         name: _name.text.trim(),
         email: emailChanged ? _email.text.trim() : null,
         phone: _phone.text.trim(),

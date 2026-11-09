@@ -1,21 +1,18 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../auth/auth_service.dart'; // adjust path
+
 class ProfileException implements Exception {
   ProfileException(this.message);
   final String message;
-  @override
-  String toString() => message;
 }
 
 class ProfileService {
-  // TODO: use your existing API base URL and token storage
-  static const _baseUrl = 'http://10.0.2.2:3000/api';
-
   static Future<Map<String, dynamic>> update({
-    required String token,
     String? name,
     String? email,
     String? phone,
@@ -23,7 +20,14 @@ class ProfileService {
     String? newPassword,
     XFile? image,
   }) async {
-    final req = http.MultipartRequest('PATCH', Uri.parse('$_baseUrl/profile'))
+    final token = AuthService.token;
+    final base = AuthService.apiBaseUrl.replaceFirst(RegExp(r'/+$'), '');
+    if (token == null) throw ProfileException('Please sign in again.');
+    if (base.isEmpty) {
+      throw ProfileException('The server address has not been configured.');
+    }
+
+    final req = http.MultipartRequest('PATCH', Uri.parse('$base/api/profile'))
       ..headers['Authorization'] = 'Bearer $token';
 
     void field(String k, String? v) {
@@ -46,11 +50,29 @@ class ProfileService {
       ));
     }
 
-    final res = await http.Response.fromStream(await req.send());
-    final body = jsonDecode(res.body) as Map<String, dynamic>;
-    if (res.statusCode != 200) {
-      throw ProfileException(body['message'] as String? ?? 'Update failed');
+    try {
+      final res = await http.Response.fromStream(
+        await req.send().timeout(const Duration(seconds: 30)),
+      );
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+
+      if (res.statusCode == 200) {
+        final updated = body['user'] as Map<String, dynamic>;
+        AuthService.user = {...?AuthService.user, ...updated}; 
+        return updated;
+      }
+      final msg = body['message'] as String? ?? 'Update failed';
+      if (res.statusCode == 401 && msg != 'Current password is incorrect') {
+        AuthService.logout();
+        throw ProfileException('Your session has expired. Please sign in again.');
+      }
+      throw ProfileException(msg);
+    } on TimeoutException {
+      throw ProfileException('The server took too long to respond.');
+    } on http.ClientException {
+      throw ProfileException('Could not connect to the server.');
+    } on FormatException {
+      throw ProfileException('The server returned an unexpected response.');
     }
-    return body['user'] as Map<String, dynamic>;
   }
 }
