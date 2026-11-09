@@ -6,18 +6,15 @@ const fs = require('fs');
 const db = require('../../config/db');
 const { requireAuth, requireRole } = require('../../middleware/auth');
 
-const UPLOAD_DIR = path.join(__dirname, '../../../uploads/profiles');
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const { createClient } = require('@supabase/supabase-js');
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+const BUCKET = 'avatars';
 
 const EXT = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' };
 
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: UPLOAD_DIR,
-    filename: (req, file, cb) =>
-      cb(null, `${req.user.id}-${Date.now()}${EXT[file.mimetype]}`),
-  }),
-  limits: { fileSize: 2 * 1024 * 1024 }, 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter: (req, file, cb) =>
     EXT[file.mimetype] ? cb(null, true) : cb(new Error('INVALID_IMAGE')),
 });
@@ -51,10 +48,7 @@ router.get('/', requireAuth, requireRole('student'), async (req, res) => {
 });
 
 router.patch('/', requireAuth, requireRole('student'), handleUpload, async (req, res) => {
-  const fail = (status, message) => {
-    if (req.file) fs.unlink(req.file.path, () => {});
-    return res.status(status).json({ message });
-  };
+  const fail = (status, message) => res.status(status).json({ message });
 
   try {
     const { name, email, phone, current_password, new_password } = req.body;
@@ -115,20 +109,38 @@ router.patch('/', requireAuth, requireRole('student'), handleUpload, async (req,
     }
 
     // profile picture
-    if (req.file) add('profile_picture', `/uploads/profiles/${req.file.filename}`);
+    let uploadedPath;
+    if (req.file) {
+      uploadedPath = `${req.user.id}/${Date.now()}${EXT[req.file.mimetype]}`;
+      const { error } = await supabase.storage
+        .from(BUCKET)
+        .upload(uploadedPath, req.file.buffer, { contentType: req.file.mimetype });
+      if (error) {
+        console.error(error);
+        return fail(500, 'Could not upload image');
+      }
+      add('profile_picture', supabase.storage.from(BUCKET).getPublicUrl(uploadedPath).data.publicUrl);
+    }
 
     if (sets.length === 0) return fail(400, 'Nothing to update');
 
     values.push(req.user.id);
-    const result = await db.query(
-      `UPDATE users SET ${sets.join(', ')} WHERE id = $${values.length}
-       RETURNING id, name, email, role, phone, profile_picture`,
-      values
-    );
+    let result;
+    try {
+      result = await db.query(
+        `UPDATE users SET ${sets.join(', ')} WHERE id = $${values.length}
+        RETURNING id, name, email, role, phone, profile_picture`,
+        values
+      );
+    } catch (e) {
+      if (uploadedPath) await supabase.storage.from(BUCKET).remove([uploadedPath]);
+      throw e; 
+    }
 
-    if (req.file && user.profile_picture) {
-      const oldPath = path.join(UPLOAD_DIR, path.basename(user.profile_picture));
-      fs.unlink(oldPath, () => {});
+    // delete the previous picture
+    if (uploadedPath && user.profile_picture) {
+      const old = user.profile_picture.split(`/${BUCKET}/`)[1];
+      if (old) supabase.storage.from(BUCKET).remove([old]).catch(() => {});
     }
 
     res.json({ user: result.rows[0] });
