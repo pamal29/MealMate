@@ -15,3 +15,5 @@ firebase-service-account*.json
 *.iml
 .DS_Store
 Thumbs.db
+
+backend/uploads/

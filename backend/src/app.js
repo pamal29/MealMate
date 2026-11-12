@@ -4,10 +4,12 @@ const helmet = require('helmet');
 const db = require('./config/db');
 
 const app = express();
+const path = require('path');
 
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+
 
 app.use('/api/auth', require('./modules/auth/auth.routes')); 
 app.use('/api/shops', require('./modules/shops/shops.public.routes'));
@@ -16,6 +18,7 @@ app.use('/api/menu', require('./modules/menu/menu.routes'));
 app.use('/api/orders', require('./modules/orders/orders.routes'));
 app.use('/api/notifications', require('./modules/notifications/notifications.routes'));
 app.use('/api/admin', require('./modules/admin/admin.routes'));
+app.use('/api/profile', require('./modules/profile/profile.routes'));
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'mealmate-api' });

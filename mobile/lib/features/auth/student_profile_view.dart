@@ -5,6 +5,7 @@ import '../home/home_style.dart';
 import '../notifications/notifications_screen.dart';
 import '../notifications/notifications_service.dart';
 import '../ordering/preview_orders.dart';
+import '../profile/edit_profile_screen.dart'; // adjust path
 
 class StudentProfileView extends StatefulWidget {
   const StudentProfileView({
@@ -14,10 +15,12 @@ class StudentProfileView extends StatefulWidget {
     required this.onOrders,
     this.isPreview = false,
     this.notificationsClient,
+    this.onUserUpdated,
   });
   final Map<String, dynamic> user;
   final VoidCallback onLogout, onOrders;
   final bool isPreview;
+  final ValueChanged<Map<String, dynamic>>? onUserUpdated;
 
   /// HTTP client for the notifications API; tests pass a mock.
   final http.Client? notificationsClient;
@@ -29,11 +32,18 @@ class _StudentProfileViewState extends State<StudentProfileView> {
   bool _notifications = true;
   String? _name, _phone;
   int _unread = 0;
+  late Map<String, dynamic> _user = widget.user;
 
   @override
   void initState() {
     super.initState();
     if (!widget.isPreview) _loadUnread();
+  }
+
+  @override
+  void didUpdateWidget(covariant StudentProfileView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.user != widget.user) _user = widget.user;
   }
 
   Future<void> _loadUnread() async {
@@ -65,19 +75,24 @@ class _StudentProfileViewState extends State<StudentProfileView> {
       ],
     ),
   );
+
   Future<void> _edit() async {
     if (!widget.isPreview) {
-      _notice(
-        'Edit Profile',
-        'Profile updates are not connected yet. Your account has not changed.',
+      final updated = await Navigator.push<Map<String, dynamic>>(
+        context,
+        MaterialPageRoute(builder: (_) => EditProfileScreen(user: _user)),
       );
+      if (updated != null && mounted) {
+        setState(() => _user = {..._user, ...updated});
+        widget.onUserUpdated?.call(_user);
+      }
       return;
     }
     final name = TextEditingController(
-      text: _name ?? widget.user['name'] as String? ?? 'Student',
+      text: _name ?? _user['name'] as String? ?? 'Student',
     );
     final phone = TextEditingController(
-      text: _phone ?? widget.user['phone'] as String? ?? '',
+      text: _phone ?? _user['phone'] as String? ?? '',
     );
     final saved = await showDialog<bool>(
       context: context,
@@ -133,6 +148,7 @@ class _StudentProfileViewState extends State<StudentProfileView> {
       child: Column(children: children),
     ),
   );
+
   Widget _row(
     IconData icon,
     String title,
@@ -155,123 +171,137 @@ class _StudentProfileViewState extends State<StudentProfileView> {
     ),
     onTap: action,
   );
+
   @override
-  Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.all(24),
-    children: [
-      const CircleAvatar(
-        radius: 38,
-        backgroundColor: HomeStyle.surface,
-        child: Icon(Icons.person, size: 50, color: HomeStyle.orange),
-      ),
-      const SizedBox(height: 14),
-      Text(
-        _name ?? widget.user['name'] as String? ?? 'Student',
-        textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w700),
-      ),
-      const SizedBox(height: 8),
-      Text(
-        widget.isPreview
-            ? 'Student · Sabaragamuwa University · Preview'
-            : '${widget.user['role'] == 'shop_owner' ? 'Shop owner' : 'Student'} · Sabaragamuwa University',
-        textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 11, color: HomeStyle.muted),
-      ),
-      const SizedBox(height: 26),
-      _panel([
-        ListTile(
-          leading: const Icon(Icons.mail_outline, size: 20),
-          title: const Text(
-            'Email',
-            style: TextStyle(color: HomeStyle.muted, fontSize: 11),
-          ),
-          subtitle: Text(widget.user['email'] as String? ?? 'Not provided'),
-        ),
-        const Divider(
-          height: 1,
-          indent: 16,
-          endIndent: 16,
-          color: HomeStyle.border,
-        ),
-        ListTile(
-          leading: const Icon(Icons.phone_outlined, size: 20),
-          title: const Text(
-            'Phone number',
-            style: TextStyle(color: HomeStyle.muted, fontSize: 11),
-          ),
-          subtitle: Text(
-            _phone ?? widget.user['phone'] as String? ?? 'Not provided',
+  Widget build(BuildContext context) {
+    final picture = _user['profile_picture'] as String?;
+    final hasPicture = picture != null && picture.isNotEmpty;
+
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        Center(
+          child: CircleAvatar(
+            radius: 38,
+            backgroundColor: HomeStyle.surface,
+            backgroundImage: hasPicture ? NetworkImage(picture) : null,
+            child: hasPicture
+                ? null
+                : const Icon(Icons.person, size: 50, color: HomeStyle.orange),
           ),
         ),
-      ]),
-      _panel([
-        _row(
-          Icons.receipt_long_outlined,
-          'My Orders',
-          widget.onOrders,
-          trailing: widget.isPreview
-              ? '${PreviewOrders.instance.orders.where((o) => !o.closed).length} sample'
-              : null,
+        const SizedBox(height: 14),
+        Text(
+          _name ?? _user['name'] as String? ?? 'Student',
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w700),
         ),
-        _row(
-          Icons.notifications_none,
-          'Notifications',
+        const SizedBox(height: 8),
+        Text(
           widget.isPreview
-              ? () => _notice(
-                  'Notifications',
-                  _notifications
-                      ? 'No new notifications. Live notifications are not connected.'
-                      : 'Preview alerts are disabled.',
-                )
-              : _openNotifications,
-          trailing: !widget.isPreview && _unread > 0 ? '$_unread new' : null,
+              ? 'Student · Sabaragamuwa University · Preview'
+              : '${_user['role'] == 'shop_owner' ? 'Shop owner' : 'Student'} · Sabaragamuwa University',
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 11, color: HomeStyle.muted),
         ),
-        _row(Icons.manage_accounts_outlined, 'Edit Profile', _edit),
-        _row(
-          Icons.settings_outlined,
-          'Settings',
-          () => showDialog<void>(
-            context: context,
-            builder: (context) => StatefulBuilder(
-              builder: (context, update) => AlertDialog(
-                title: const Text('Preview settings'),
-                content: SwitchListTile(
-                  title: const Text('Show preview alerts'),
-                  value: _notifications,
-                  onChanged: (v) {
-                    setState(() => _notifications = v);
-                    update(() {});
-                  },
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Done'),
+        const SizedBox(height: 26),
+        _panel([
+          ListTile(
+            leading: const Icon(Icons.mail_outline, size: 20),
+            title: const Text(
+              'Email',
+              style: TextStyle(color: HomeStyle.muted, fontSize: 11),
+            ),
+            subtitle: Text(_user['email'] as String? ?? 'Not provided'),
+          ),
+          const Divider(
+            height: 1,
+            indent: 16,
+            endIndent: 16,
+            color: HomeStyle.border,
+          ),
+          ListTile(
+            leading: const Icon(Icons.phone_outlined, size: 20),
+            title: const Text(
+              'Phone number',
+              style: TextStyle(color: HomeStyle.muted, fontSize: 11),
+            ),
+            subtitle: Text(
+              _phone ?? _user['phone'] as String? ?? 'Not provided',
+            ),
+          ),
+        ]),
+        _panel([
+          _row(
+            Icons.receipt_long_outlined,
+            'My Orders',
+            widget.onOrders,
+            trailing: widget.isPreview
+                ? '${PreviewOrders.instance.orders.where((o) => !o.closed).length} sample'
+                : null,
+          ),
+          _row(
+            Icons.notifications_none,
+            'Notifications',
+            widget.isPreview
+                ? () => _notice(
+                    'Notifications',
+                    _notifications
+                        ? 'No new notifications. Live notifications are not connected.'
+                        : 'Preview alerts are disabled.',
+                  )
+                : _openNotifications,
+            trailing: !widget.isPreview && _unread > 0 ? '$_unread new' : null,
+          ),
+          _row(Icons.manage_accounts_outlined, 'Edit Profile', _edit),
+          _row(
+            Icons.settings_outlined,
+            'Settings',
+            () => showDialog<void>(
+              context: context,
+              builder: (context) => StatefulBuilder(
+                builder: (context, update) => AlertDialog(
+                  title: const Text('Preview settings'),
+                  content: SwitchListTile(
+                    title: const Text('Show preview alerts'),
+                    value: _notifications,
+                    onChanged: (v) {
+                      setState(() => _notifications = v);
+                      update(() {});
+                    },
                   ),
-                ],
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Done'),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
+        ]),
+        OutlinedButton.icon(
+          onPressed: widget.onLogout,
+          icon: const Icon(Icons.logout, size: 18),
+          label: Text(widget.isPreview ? 'Back to login' : 'Logout'),
         ),
-      ]),
-      OutlinedButton.icon(
-        onPressed: widget.onLogout,
-        icon: const Icon(Icons.logout, size: 18),
-        label: Text(widget.isPreview ? 'Back to login' : 'Logout'),
-      ),
-      const SizedBox(height: 34),
-      const Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'MealMate',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-          ),
-          SizedBox(width: 8),
-          Text('SUSL', style: TextStyle(color: HomeStyle.orange, fontSize: 11)),
-        ],
-      ),
-    ],
-  );
+        const SizedBox(height: 34),
+        const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'MealMate',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            ),
+            SizedBox(width: 8),
+            Text(
+              'SUSL',
+              style: TextStyle(color: HomeStyle.orange, fontSize: 11),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 }
